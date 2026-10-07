@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { browserClient } from "@/lib/supabase-browser";
+import { browserClient } from "@/app/_lib/supabase-browser";
 
 function LoginForm() {
   const router = useRouter();

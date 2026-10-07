@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { currentProfile, homeFor } from "@/lib/supabase";
+import { currentProfile, homeFor } from "@/app/_lib/supabase";
 
 export const metadata: Metadata = {
   title: "Foundations of Academic Presentations",

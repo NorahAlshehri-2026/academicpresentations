@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { currentProfile, serverClient, homeFor } from "@/lib/supabase";
+import { currentProfile, serverClient, homeFor } from "@/app/_lib/supabase";
 
 export default async function AdminDashboard() {
   const profile = await currentProfile();

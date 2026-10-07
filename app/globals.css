@@ -153,3 +153,40 @@ input, select, textarea {
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th, td { border: 1px solid var(--rule); padding: 8px 10px; text-align: left; vertical-align: top; }
 th { background: var(--tint); color: var(--ink); font-size: 11px; text-transform: uppercase; }
+
+/* studio ---------------------------------------------------------------- */
+.timer {
+  font-variant-numeric: tabular-nums; font-size: 46px; font-weight: 700;
+  text-align: center; color: var(--ink); margin: 8px 0 2px;
+}
+.timer.over { color: var(--red); }
+.bar { height: 8px; border-radius: 999px; background: var(--tint); overflow: hidden; margin: 10px 0 4px; }
+.bar > i { display: block; height: 100%; background: var(--gold); width: 0; transition: width .3s linear; }
+.bar > i.over { background: var(--red); }
+.btn.rec { background: var(--red); color: #fff; }
+.btn.sm { padding: 8px 12px; min-height: 38px; font-size: 13px; }
+.dot {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--red);
+  display: inline-block; margin-right: 6px; animation: pulse 1.2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+.center { text-align: center; }
+
+.score-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.score-row .nm { flex: 1; font-size: 13px; font-weight: 600; }
+.seg { display: flex; gap: 4px; }
+.seg button {
+  width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--rule);
+  background: var(--card); font-weight: 700; font-size: 14px; cursor: pointer;
+  color: var(--text); font-family: inherit;
+}
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.rbar { height: 6px; border-radius: 999px; background: var(--tint); overflow: hidden; flex: 1; }
+.rbar > i { display: block; height: 100%; background: var(--ink); }
+
+audio, video.play { width: 100%; border-radius: 10px; background: #000; }
+audio { background: transparent; }
+
+.lesson-body { font-size: 14.5px; line-height: 1.65; }
+.lesson-body li { margin-bottom: 5px; }
+details summary::-webkit-details-marker { color: var(--muted); }
