@@ -3,6 +3,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { currentProfile, homeFor } from "@/app/_lib/supabase";
 
+/**
+ * Every page reads the database, and what it reads changes as you teach:
+ * courses are published, students enrol, marks are entered. Rendering these
+ * pages once and serving the result afterwards would show yesterday's state.
+ * This applies to every route in the site.
+ */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Foundations of Academic Presentations",
   description:
