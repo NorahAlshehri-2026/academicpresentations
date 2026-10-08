@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentProfile, serverClient, homeFor } from "@/app/_lib/supabase";
 
@@ -30,6 +31,18 @@ export default async function AdminDashboard() {
           <span className="pill">{count("admin")} admins</span>
           <span className="pill">{courses?.length ?? 0} courses</span>
         </div>
+        <div className="row" style={{ marginTop: 12 }}>
+          <Link className="btn ghost" href="/teach">
+            My classes and class links
+          </Link>
+          <Link className="btn ghost" href="/courses">
+            The course
+          </Link>
+        </div>
+        <p className="tiny muted" style={{ marginTop: 10 }}>
+          To add students, open <b>My classes</b> and share that section&rsquo;s class link. An
+          emailed invitation is only needed for a teacher or another administrator.
+        </p>
       </div>
 
       <div className="card">

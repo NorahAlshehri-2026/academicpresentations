@@ -30,7 +30,12 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const guarded = ["/dashboard", "/teach", "/admin", "/learn", "/join"];
+
+  // /join is deliberately open: a class link has to work for a student who has
+  // never been here and has no account yet. The page itself shows nothing but
+  // the course title, the section and a signup form, and the code is checked
+  // on the server before any account is created.
+  const guarded = ["/dashboard", "/teach", "/admin", "/learn"];
 
   if (!user && guarded.some((p) => path.startsWith(p))) {
     const url = request.nextUrl.clone();
