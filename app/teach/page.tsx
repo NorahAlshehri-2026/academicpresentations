@@ -50,7 +50,7 @@ export default async function TeacherDashboard() {
           <h3>My courses</h3>
           <div className="row" style={{ marginTop: 10 }}>
             {courses.map((c: any) => (
-              <Link key={c.id} className="btn ghost" href={`/teach/courses/${c.id}`}>
+              <Link key={c.id} className="btn ghost" href={`/learn/${c.id}`}>
                 {c.title} {c.published ? "" : "· draft"}
               </Link>
             ))}

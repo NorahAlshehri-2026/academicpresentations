@@ -19,6 +19,14 @@ export default async function StudentDashboard() {
     .from("section_totals")
     .select("section_id, marked_items, mean_out_of_20");
 
+  const { data: sharedRaw } = await supabase
+    .from("submission_shares")
+    .select("submission_id, submission:submissions!inner(feedback(author_id))")
+    .eq("shared_with", profile.id);
+  const waiting = ((sharedRaw ?? []) as any[]).filter(
+    (x) => !(x.submission?.feedback ?? []).some((f: any) => f.author_id === profile.id)
+  ).length;
+
   const meanFor = (sectionId: string) =>
     totals?.find((t: any) => t.section_id === sectionId)?.mean_out_of_20 ?? null;
 
@@ -35,6 +43,16 @@ export default async function StudentDashboard() {
             : "You are not enrolled in anything yet. Use the join link your teacher sent you."}
         </p>
       </div>
+
+      {waiting > 0 && (
+        <Link className="card" href="/shared" style={{ textDecoration: "none", display: "block", borderLeft: "4px solid var(--gold)" }}>
+          <div className="spread">
+            <h3>Classmates are waiting for your feedback</h3>
+            <span className="pill c5">{waiting}</span>
+          </div>
+          <p className="small muted">Open Shared with me to listen and score their recordings.</p>
+        </Link>
+      )}
 
       <div className="grid">
         {enrolments?.map((e: any) => {

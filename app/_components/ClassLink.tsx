@@ -61,6 +61,23 @@ export default function ClassLink({
     setTimeout(() => setCopied(null), 1800);
   }
 
+  async function newLink() {
+    if (!window.confirm("Make a new link? The old one stops working. Students who already joined stay in the class.")) return;
+    setBusy(true);
+    setError(null);
+    const supabase = browserClient();
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
+    const { error: e } = await supabase.from("sections").update({ invite_code: code }).eq("id", sectionId);
+    setBusy(false);
+    if (e) {
+      setError("A new link could not be made. Reload the page and try again.");
+      return;
+    }
+    router.refresh();
+  }
+
   async function toggle() {
     setBusy(true);
     setError(null);
@@ -99,6 +116,17 @@ export default function ClassLink({
         </button>
         <button type="button" className="btn ghost sm" onClick={() => copy("message")}>
           {copied === "message" ? "Copied" : "Copy announcement"}
+        </button>
+        <a
+          className="btn ghost sm"
+          target="_blank"
+          rel="noopener noreferrer"
+          href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+        >
+          WhatsApp
+        </a>
+        <button type="button" className="btn ghost sm" onClick={newLink} disabled={busy}>
+          New link
         </button>
         <button
           type="button"

@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
   // never been here and has no account yet. The page itself shows nothing but
   // the course title, the section and a signup form, and the code is checked
   // on the server before any account is created.
-  const guarded = ["/dashboard", "/teach", "/admin", "/learn"];
+  const guarded = ["/dashboard", "/teach", "/admin", "/learn", "/shared", "/progress", "/review"];
 
   if (!user && guarded.some((p) => path.startsWith(p))) {
     const url = request.nextUrl.clone();
