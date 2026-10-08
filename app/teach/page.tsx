@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentProfile, serverClient, homeFor } from "@/app/_lib/supabase";
+import ClassLink from "@/app/_components/ClassLink";
 
 export default async function TeacherDashboard() {
   const profile = await currentProfile();
@@ -23,17 +24,24 @@ export default async function TeacherDashboard() {
     .select("id, title, published")
     .eq("owner_id", profile.id);
 
+  // who has actually joined each section, which is not the same as who has
+  // been marked — a student can be enrolled with nothing submitted yet
+  const { data: enrolled } = await supabase
+    .from("enrolments")
+    .select("section_id, student_id, profiles!inner(full_name, email)")
+    .eq("status", "active");
+
   return (
     <>
       <div className="card">
         <div className="spread">
           <h3>Teaching</h3>
-          <Link className="btn gold" href="/teach/courses/new">New course</Link>
+          <Link className="btn gold" href="/teach/sections/new">Open a class</Link>
         </div>
         <p className="small muted" style={{ marginTop: 6 }}>
           {sections?.length
-            ? `${sections.length} section${sections.length === 1 ? "" : "s"} running.`
-            : "No sections yet. Create a course, then open a section for your class."}
+            ? `${sections.length} class${sections.length === 1 ? "" : "es"} running. Each one has its own link to share with its students.`
+            : "No classes yet. Open one, then share its link with your students."}
         </p>
       </div>
 
@@ -52,6 +60,7 @@ export default async function TeacherDashboard() {
 
       {sections?.map((s: any) => {
         const rows = totals?.filter((t: any) => t.section_id === s.id) ?? [];
+        const members = enrolled?.filter((e: any) => e.section_id === s.id) ?? [];
         return (
           <div className="card" key={s.id}>
             <div className="spread">
@@ -62,12 +71,57 @@ export default async function TeacherDashboard() {
             </div>
 
             <div className="row" style={{ marginTop: 8 }}>
+              <span className="pill">
+                {members.length} joined
+              </span>
               <span className="pill">{rows.length} marked</span>
-              {s.invites_open && <span className="tiny muted">join code {s.invite_code}</span>}
-              <Link className="btn ghost" href={`/teach/sections/${s.id}`} style={{ marginLeft: "auto" }}>
+              <Link
+                className="btn ghost sm"
+                href={`/teach/sections/new?course=${s.courses?.id ?? ""}&term=${encodeURIComponent(s.term)}`}
+                style={{ marginLeft: "auto" }}
+              >
+                Duplicate for another section
+              </Link>
+              <Link className="btn ghost sm" href={`/teach/sections/${s.id}`}>
                 Open gradebook
               </Link>
             </div>
+
+            <ClassLink
+              sectionId={s.id}
+              code={s.invite_code}
+              open={s.invites_open}
+              courseTitle={s.courses?.title ?? "The course"}
+              sectionNumber={s.number}
+              term={s.term}
+              teacherName={profile.full_name}
+            />
+
+            {members.length > 0 && (
+              <details style={{ marginTop: 12 }}>
+                <summary className="small" style={{ cursor: "pointer", fontWeight: 600 }}>
+                  Who has joined ({members.length})
+                </summary>
+                <div className="tablewrap" style={{ marginTop: 8 }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Email</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {members.map((m: any) => (
+                        <tr key={m.student_id}>
+                          <td>{m.profiles?.full_name}</td>
+                          <td>{m.profiles?.email}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
 
             {rows.length > 0 && (
               <div className="tablewrap" style={{ marginTop: 12 }}>

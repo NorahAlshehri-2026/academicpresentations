@@ -39,8 +39,8 @@ function LoginForm() {
       <div className="card">
         <h3>Sign in</h3>
         <p className="small muted">
-          Accounts are created by invitation. If you were invited, use the link in your email to set
-          a password first.
+          Students: if your teacher gave you a class link, open that link instead — it sets up your
+          account for you. Otherwise use the email and password you already have.
         </p>
 
         <form onSubmit={signIn}>
