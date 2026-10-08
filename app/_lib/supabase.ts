@@ -8,10 +8,21 @@ import type { Profile } from "./types";
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+/**
+ * Next.js replaces the global fetch inside server components with one that
+ * caches by default, and supabase-js reads the database through global fetch.
+ * Left alone, the first answer to a query is served from then on: a course
+ * published today stays invisible, a student added today never appears, a mark
+ * entered today is not the mark the page shows. Every read here must be live.
+ */
+const liveFetch: typeof fetch = (input, init) =>
+  fetch(input, { ...init, cache: "no-store" });
+
 /** In a server component or route handler. Carries the signed-in user, so RLS applies. */
 export function serverClient() {
   const store = cookies();
   return createServerClient(URL, ANON, {
+    global: { fetch: liveFetch },
     cookies: {
       getAll: () => store.getAll(),
       setAll: (list: { name: string; value: string; options: CookieOptions }[]) => {
@@ -34,7 +45,10 @@ export function serverClient() {
 export function adminClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
-  return createClient(URL, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient(URL, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: liveFetch },
+  });
 }
 
 /** The signed-in user's profile, or null. The one place roles are read. */
