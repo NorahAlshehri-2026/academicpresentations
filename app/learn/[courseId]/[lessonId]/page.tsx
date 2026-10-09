@@ -308,7 +308,7 @@ export default async function LessonPage({
                 hasPeer={fb.some((f) => f.source === "peer" || f.source === "teacher")}
                 hasAi={fb.some((f) => f.source === "ai")}
                 hasTranscript={!!s.transcript?.trim()}
-                auto={!!process.env.ANTHROPIC_API_KEY}
+                auto={process.env.AI_FEEDBACK_AUTO === "on" && !!process.env.ANTHROPIC_API_KEY}
               />
             </div>
           </div>

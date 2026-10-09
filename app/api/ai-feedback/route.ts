@@ -9,9 +9,10 @@ import { RUBRIC } from "@/app/_lib/rubric";
  * pastes it into any free assistant (Claude, ChatGPT, Gemini…) and sends the
  * reply back with POST { submissionId, reply }. Nothing is paid for.
  *
- * The automatic way (optional, paid per use): if ANTHROPIC_API_KEY is set in
- * the hosting settings, POST { submissionId } asks Claude directly. Leave the
- * key unset to keep the academy free of charge.
+ * The automatic way (optional, paid per use): POST { submissionId } asks
+ * Claude directly, but only when BOTH are set in the hosting settings:
+ * ANTHROPIC_API_KEY and AI_FEEDBACK_AUTO=on. Having the key alone changes
+ * nothing, so the academy stays free of charge until someone switches it on.
  *
  * Everything the route READS goes through the viewer's own client, so access
  * rules decide what they may see. The single WRITE uses the server key,
@@ -19,6 +20,10 @@ import { RUBRIC } from "@/app/_lib/rubric";
  */
 
 const MODEL = process.env.AI_FEEDBACK_MODEL || "claude-sonnet-5-5";
+
+/** Paid automatic feedback runs only when it has been switched on deliberately. */
+const autoFeedbackOn = () =>
+  process.env.AI_FEEDBACK_AUTO === "on" && !!process.env.ANTHROPIC_API_KEY;
 
 type Loaded =
   | { error: string; status: number }
@@ -162,7 +167,7 @@ export async function POST(request: Request) {
 
   // the automatic way, only if the academy has chosen to pay for it
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  if (!key || !autoFeedbackOn()) {
     return NextResponse.json({ error: "Automatic AI feedback is switched off. Use the copy-and-paste steps." }, { status: 503 });
   }
 

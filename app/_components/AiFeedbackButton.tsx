@@ -14,8 +14,8 @@ const ASSISTANTS: [string, string][] = [
  * it into any free AI assistant, then pastes the reply back here, where it is
  * read as rubric scores and saved with the recording.
  *
- * If the academy has chosen to pay for automatic feedback (an API key in the
- * hosting settings), a one-tap button appears as well.
+ * If the academy has switched on paid automatic feedback (AI_FEEDBACK_AUTO=on
+ * as well as an API key in the hosting settings), a one-tap button appears too.
  */
 export default function AiFeedbackButton({
   submissionId,
