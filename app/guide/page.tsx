@@ -21,7 +21,7 @@ export default function GuidePage() {
       <div className="card">
         <h3>Recording a speaking task</h3>
         <ol className="guide">
-          <li>Open <b>My learning</b>, then the course, then a task marked <b>Record</b>.</li>
+          <li>Open <b>Activities</b> and tap the activity your teacher set. <b>Units</b> has the short reading for each unit.</li>
           <li>Run the preparation timer and plan a framework, not a script. Reading aloud costs marks under criterion 3.</li>
           <li>
             Tap <b>Start recording</b>. After a three-second count-in the clock counts down your speaking time. It
@@ -41,7 +41,7 @@ export default function GuidePage() {
       <div className="card">
         <h3>Sharing and feedback</h3>
         <ol className="guide">
-          <li>Under your saved attempt, tap <b>Share</b> next to a classmate&rsquo;s name. That is all.</li>
+          <li>Under your saved attempt (or from <b>My recordings</b>), tap <b>Share</b> next to a classmate&rsquo;s name. That is all.</li>
           <li>Your classmate finds it under <b>Shared with me</b>, listens, and scores it against the rubric.</li>
           <li>
             Their feedback appears on your attempt. Your teacher can hear and mark all your recordings without you
@@ -55,7 +55,7 @@ export default function GuidePage() {
         <h3>For teachers</h3>
         <ul className="small" style={{ paddingLeft: 18, margin: "8px 0 0" }}>
           <li style={{ marginBottom: 6 }}>
-            Open <b>My classes</b>, open a class, and post its link in your announcement or WhatsApp group. Close
+            <b>Units</b> and <b>Activities</b> show you exactly what students see (a student preview: you can try the recorder, nothing is saved). Open <b>My classes</b>, open a class, and post its link in your announcement or WhatsApp group. Close
             the link once everyone has joined, or make a new one to retire the old.
           </li>
           <li style={{ marginBottom: 6 }}>

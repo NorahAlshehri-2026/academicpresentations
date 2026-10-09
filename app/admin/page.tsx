@@ -46,6 +46,9 @@ export default async function AdminDashboard() {
           <span className="pill">{count("admin")} admins</span>
           <span className="pill">{sections?.length ?? 0} classes</span>
         </div>
+        <div className="row" style={{ marginTop: 10 }}>
+          <Link className="btn ghost sm" href="/courses">Student preview of the course</Link>
+        </div>
         <p className="tiny muted" style={{ marginTop: 10 }}>
           Students join with a class link, which every teacher shares from <b>My classes</b>. Teachers and
           administrators join with a one-time link that only {isOwner ? "you" : ownerName} can make.

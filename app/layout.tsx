@@ -39,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="sitehead">
           <div className="inner">
             <Link className="brand" href="/">
-              <span className="mk">A</span>
+              <span className="mk">P</span>
               <span>
                 <b>Academic Presentations</b>
                 <i>

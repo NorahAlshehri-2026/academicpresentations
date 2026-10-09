@@ -9,4 +9,4 @@ export type Profile = {
 };
 
 export const homeFor = (role: Role) =>
-  role === "admin" ? "/admin" : role === "teacher" ? "/teach" : "/dashboard";
+  role === "admin" ? "/admin" : role === "teacher" ? "/teach" : "/";

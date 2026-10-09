@@ -48,7 +48,7 @@ export default async function ProgressPage() {
           Nothing recorded yet. Finish one speaking task and this page fills with your scores by criterion, your
           timing, and how you move over the term.
         </p>
-        <Link className="btn gold block" style={{ marginTop: 12 }} href="/dashboard">Go to my learning</Link>
+        <Link className="btn gold block" style={{ marginTop: 12 }} href="/activities">Choose an activity</Link>
       </div>
     );
   }

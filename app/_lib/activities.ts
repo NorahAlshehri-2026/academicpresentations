@@ -61,3 +61,31 @@ export const CRIT_CLASS: Record<string, string> = {
 };
 
 export const MAX_ATTEMPTS = 2;
+
+/** The workbook reference, criterion group and one-line task for each speaking task. */
+export const ACTIVITY_INFO: Record<string, { skill: string; source: string; task: string }> = {
+  a1: { skill: "intro", source: "Unit 1, exercise 3.4", task: "Choose one topic and open a presentation on it. Greet the audience, state the topic, say what you intend to do, and preview your points." },
+  a2: { skill: "intro", source: "Unit 4, exercise 2.2", task: "Open using an alternative technique: a surprising fact, a question to the audience, or asking them to do something. Then move into topic and purpose." },
+  a3: { skill: "intro", source: "Unit 1, exercise 4.5", task: "Deliver the general introduction and overview stages only. State your main theme, then divide it into two or three sub-themes." },
+  a4: { skill: "organization", source: "Unit 2, exercise 2.3", task: "Deliver your framework on the invention of penicillin. Add a lead-in phrase before your first sub-theme and pause in all the right places." },
+  a5: { skill: "organization", source: "Unit 2, exercise 3.1", task: "Present a three-part body. Use a different linking phrase to move into each sub-theme, and make the transitions audible." },
+  a6: { skill: "delivery", source: "Unit 1, exercise 5.2", task: "Deliver the framework on ways to improve your English. Mark your pauses first, vary your tone, avoid a monotone." },
+  a7: { skill: "delivery", source: "Unit 4, exercise 3.2", task: "Read the six statements aloud, each rewritten to carry more impact through word stress." },
+  a8: { skill: "language", source: "Unit 3, exercise 5.4", task: "Present two benefits and one concern about AI in healthcare. Acknowledge all three journal articles orally and finish with your own opinion." },
+  a9: { skill: "conclusion", source: "Unit 3, exercise 6.3", task: "Deliver a mini presentation, paying particular attention to the last thirty seconds: summarise, signal the end, thank the audience, invite questions." },
+  a10: { skill: "all", source: "All five units", task: "Deliver a complete five-minute presentation: opening, overview, three developed sub-themes with sources acknowledged, and a signalled ending with questions invited." },
+};
+
+export const SKILL_GROUPS: [string, string][] = [
+  ["intro", "1 · Introduction and structure"],
+  ["organization", "2 · Organization and content"],
+  ["delivery", "3 · Delivery and engagement"],
+  ["language", "4 · Academic language and sources"],
+  ["conclusion", "5 · Conclusion and professionalism"],
+  ["all", "Putting it together"],
+];
+
+/** The workbook's unit for each task, as the original studio grouped them. */
+export const UNIT_OF_ACTIVITY: Record<string, number> = {
+  a1: 1, a3: 1, a6: 1, a4: 2, a5: 2, a8: 3, a9: 3, a2: 4, a7: 4, a10: 5,
+};

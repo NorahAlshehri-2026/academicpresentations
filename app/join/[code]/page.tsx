@@ -100,7 +100,7 @@ export default async function JoinPage({ params }: { params: { code: string } })
       .eq("student_id", profile.id)
       .maybeSingle();
 
-    if (already) redirect(`/learn/${section.course_id}`);
+    if (already) redirect(`/activities`);
 
     return (
       <div className="card" style={card}>

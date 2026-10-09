@@ -77,6 +77,9 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
           <span className="pill">{students.length} student{students.length === 1 ? "" : "s"}</span>
         </div>
         <div className="meta">{sec.term} · Teacher: {sec.teacher?.full_name ?? "—"}</div>
+        <Link className="btn ghost sm" href={`/learn/${sec.course_id}`} style={{ marginTop: 10 }}>
+          Student preview
+        </Link>
         {toMark > 0 && (
           <div className="note" style={{ marginTop: 10 }}>
             <b>{toMark}</b> attempt{toMark === 1 ? "" : "s"} waiting for a mark. Open a student to listen and mark.

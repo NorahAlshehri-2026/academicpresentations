@@ -82,6 +82,9 @@ export default async function TeacherDashboard() {
               >
                 Duplicate for another section
               </Link>
+              <Link className="btn ghost sm" href={`/learn/${s.courses?.id ?? ""}`}>
+                Student preview
+              </Link>
               <Link className="btn ghost sm" href={`/teach/sections/${s.id}`}>
                 Open gradebook
               </Link>

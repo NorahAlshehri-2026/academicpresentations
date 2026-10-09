@@ -13,6 +13,8 @@ type Props = {
   targetSeconds: number;
   /** which attempt this recording will become: 1 or 2 */
   nextAttempt: number;
+  /** staff looking at the student view: everything works except saving */
+  preview?: boolean;
 };
 
 const OVERRUN = 45; // seconds past the target before the clock stops itself
@@ -40,6 +42,7 @@ export default function PracticeRecorder({
   prepSeconds,
   targetSeconds,
   nextAttempt,
+  preview = false,
 }: Props) {
   const router = useRouter();
   const final = nextAttempt >= 2;
@@ -346,14 +349,25 @@ export default function PracticeRecorder({
               style={{ minHeight: 110 }}
             />
 
-            <button
-              className={`btn block${final ? " gold" : ""}`}
-              style={{ marginTop: 14 }}
-              onClick={save}
-              disabled={saving}
-            >
-              {saving ? "Uploading…" : `Save attempt ${nextAttempt}`}
-            </button>
+            {preview ? (
+              <>
+                <button className="btn block" style={{ marginTop: 14 }} disabled>
+                  Save attempt {nextAttempt}
+                </button>
+                <p className="tiny muted center" style={{ marginTop: 6 }}>
+                  Student preview: this is where a student saves. Nothing you record here is saved.
+                </p>
+              </>
+            ) : (
+              <button
+                className={`btn block${final ? " gold" : ""}`}
+                style={{ marginTop: 14 }}
+                onClick={save}
+                disabled={saving}
+              >
+                {saving ? "Uploading…" : `Save attempt ${nextAttempt}`}
+              </button>
+            )}
           </>
         )}
 

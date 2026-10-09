@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { currentProfile, serverClient } from "@/app/_lib/supabase";
 import { unitMeta, MAX_ATTEMPTS } from "@/app/_lib/activities";
 import { mmss } from "@/app/_lib/format";
+import { PreviewBanner } from "@/app/_components/StudentPreview";
 
 const KIND_LABEL: Record<string, string> = {
   reading: "Read",
@@ -62,6 +63,7 @@ export default async function CoursePage({ params }: { params: { courseId: strin
 
   return (
     <>
+      {!student && <PreviewBanner />}
       <div className="card">
         <div className="spread">
           <h3 style={{ fontSize: 19 }}>{course.title}</h3>

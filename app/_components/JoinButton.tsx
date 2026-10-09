@@ -34,7 +34,7 @@ export default function JoinButton({
       );
       return;
     }
-    router.push(`/learn/${courseId}`);
+    router.push(`/activities`);
     router.refresh();
   }
 

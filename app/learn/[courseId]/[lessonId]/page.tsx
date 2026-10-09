@@ -13,6 +13,7 @@ import DeleteAttempt from "@/app/_components/DeleteAttempt";
 import MediaPlayer from "@/app/_components/MediaPlayer";
 import FeedbackList, { type FeedbackRow } from "@/app/_components/FeedbackList";
 import { isVideoPath } from "@/app/_lib/format";
+import { PreviewBanner, SampleAttempt } from "@/app/_components/StudentPreview";
 
 export default async function LessonPage({
   params,
@@ -52,7 +53,9 @@ export default async function LessonPage({
 
   const header = (
     <div className="card">
-      <Link className="btn ghost sm" href={`/learn/${lesson.course_id}`}>← Back to the course</Link>
+      <Link className="btn ghost sm" href={isPractice ? "/activities" : "/units"}>
+        ← {isPractice ? "All activities" : "The units"}
+      </Link>
       <div className="spread" style={{ marginTop: 12 }}>
         <h3 style={{ fontSize: 19 }}>{lesson.title}</h3>
         <span className="pill" style={{ background: meta.colour, color: "#fff" }}>Unit {lesson.unit}</span>
@@ -108,33 +111,27 @@ export default async function LessonPage({
     </>
   );
 
+  const staff = profile.role !== "student";
+
   if (!isPractice) {
     return (
       <>
+        {staff && <PreviewBanner />}
         {header}
         {mediaCards}
-        {profile.role === "student" && <CompleteButton lessonId={lesson.id} studentId={profile.id} done={!!done} />}
+        {staff ? (
+          <div className="card">
+            <button className="btn block" disabled>Mark as complete</button>
+            <p className="tiny muted center" style={{ marginTop: 6 }}>Students tick off reading and video lessons here.</p>
+          </div>
+        ) : (
+          <CompleteButton lessonId={lesson.id} studentId={profile.id} done={!!done} />
+        )}
       </>
     );
   }
 
   // ---- speaking task -------------------------------------------------------
-
-  if (profile.role !== "student") {
-    return (
-      <>
-        {header}
-        {mediaCards}
-        <div className="card">
-          <h3>Students record this task</h3>
-          <p className="small muted">
-            Their attempts appear in your gradebook under <b>My classes</b>, where you can listen and mark them.
-          </p>
-          <Link className="btn ghost sm" href="/teach" style={{ marginTop: 8 }}>Open my classes</Link>
-        </div>
-      </>
-    );
-  }
 
   const { data: enrolment } = await supabase
     .from("enrolments")
@@ -194,12 +191,29 @@ export default async function LessonPage({
   const usedFinal = mine.some((s) => s.attempt_no >= MAX_ATTEMPTS);
   const nextAttempt = usedFinal ? 0 : mine.some((s) => s.attempt_no === 1) ? 2 : 1;
 
+  // staff who are not in a class of this course see the student view without saving
+  const previewOnly = staff && !sectionId;
+
   return (
     <>
+      {staff && <PreviewBanner saving={!previewOnly} />}
       {header}
       {mediaCards}
 
-      {!sectionId ? (
+      {previewOnly ? (
+        <>
+          <PracticeRecorder
+            lessonId={lesson.id}
+            sectionId=""
+            studentId={profile.id}
+            prepSeconds={lesson.prep_seconds ?? 120}
+            targetSeconds={target}
+            nextAttempt={1}
+            preview
+          />
+          <SampleAttempt target={target} />
+        </>
+      ) : !sectionId ? (
         <div className="card">
           <h3>Not in a class yet</h3>
           <p className="small muted">
