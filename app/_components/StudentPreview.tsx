@@ -83,11 +83,12 @@ export function SampleAttempt({ target }: { target: number }) {
         <h3 style={{ fontSize: 14 }}>Feedback</h3>
         <FeedbackList feedback={SAMPLE_FEEDBACK} viewerId="" emptyText="" />
         <button type="button" className="btn gold block" style={{ marginTop: 12 }} disabled>
-          Get AI feedback
+          Write the feedback request
         </button>
         <p className="tiny muted" style={{ marginTop: 6 }}>
-          Unlocks once a classmate or the teacher has scored the attempt. The teacher&rsquo;s official mark appears
-          above the feedback.
+          Free AI feedback: unlocks once a classmate or the teacher has scored the attempt. The site writes the request,
+          the student pastes it into any free assistant (Claude, ChatGPT, Gemini) and pastes the answer back. The
+          teacher&rsquo;s official mark appears above the feedback.
         </p>
       </div>
     </div>

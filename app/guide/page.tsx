@@ -47,7 +47,7 @@ export default function GuidePage() {
             Their feedback appears on your attempt. Your teacher can hear and mark all your recordings without you
             sharing them.
           </li>
-          <li>Once you have feedback, tap <b>Get AI feedback</b> for a second reading of your transcript.</li>
+          <li>Once you have feedback, tap <b>Write the feedback request</b>. Copy it into any free AI assistant (Claude, ChatGPT or Gemini), then paste its whole answer back and tap <b>Save</b>. It is free, and it is practice feedback, not your mark.</li>
         </ol>
       </div>
 
