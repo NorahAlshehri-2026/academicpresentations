@@ -52,11 +52,11 @@ export default function JoinSignup({ code }: { code: string }) {
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (signInError) {
-      router.push(`/login?next=/learn/${data.courseId}`);
+      router.push(`/login?next=/activities`);
       return;
     }
 
-    router.push(`/learn/${data.courseId}`);
+    router.push(`/activities`);
     router.refresh();
   }
 

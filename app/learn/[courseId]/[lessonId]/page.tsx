@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { currentProfile, serverClient } from "@/app/_lib/supabase";
-import { RUBRIC, RB, totalOf, band } from "@/app/_lib/rubric";
+import { RB } from "@/app/_lib/rubric";
+import { FOCUS, CRIT_CLASS, MAX_ATTEMPTS, unitMeta } from "@/app/_lib/activities";
+import { mmss, fmtDate, metricsOf, paceLabel } from "@/app/_lib/format";
 import Prose from "@/app/_components/Prose";
 import PracticeRecorder from "@/app/_components/PracticeRecorder";
-import PeerFeedback from "@/app/_components/PeerFeedback";
 import CompleteButton from "@/app/_components/CompleteButton";
 import AiFeedbackButton from "@/app/_components/AiFeedbackButton";
-
-const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+import SharePanel from "@/app/_components/SharePanel";
+import DeleteAttempt from "@/app/_components/DeleteAttempt";
+import MediaPlayer from "@/app/_components/MediaPlayer";
+import FeedbackList, { type FeedbackRow } from "@/app/_components/FeedbackList";
+import { isVideoPath } from "@/app/_lib/format";
+import { PreviewBanner, SampleAttempt } from "@/app/_components/StudentPreview";
 
 export default async function LessonPage({
   params,
@@ -34,47 +39,6 @@ export default async function LessonPage({
     .eq("lesson_id", lesson.id)
     .order("order_no");
 
-  // which section is this person in for this course?
-  const { data: enrolment } = await supabase
-    .from("enrolments")
-    .select("section_id, sections!inner(course_id)")
-    .eq("student_id", profile.id)
-    .eq("status", "active")
-    .eq("sections.course_id", lesson.course_id)
-    .maybeSingle();
-
-  const sectionId = (enrolment as any)?.section_id ?? null;
-
-  // this person's attempts at this lesson
-  const { data: mine } = await supabase
-    .from("submissions")
-    .select("id, attempt_no, transcript, duration_seconds, file_path, created_at")
-    .eq("lesson_id", lesson.id)
-    .eq("student_id", profile.id)
-    .order("created_at", { ascending: false });
-
-  const latest = mine?.[0] ?? null;
-
-  const { data: feedback } = latest
-    ? await supabase
-        .from("feedback")
-        .select("id, source, scores, strengths, improve, created_at, author_id")
-        .eq("submission_id", latest.id)
-        .order("created_at", { ascending: false })
-    : { data: null };
-
-  // classmates' attempts, so a partner can be reviewed
-  const { data: othersRaw } = sectionId
-    ? await supabase
-        .from("submissions")
-        .select("id, student_id, created_at, duration_seconds, file_path")
-        .eq("lesson_id", lesson.id)
-        .eq("section_id", sectionId)
-        .neq("student_id", profile.id)
-        .order("created_at", { ascending: false })
-        .limit(10)
-    : { data: null };
-
   const { data: done } = await supabase
     .from("lesson_progress")
     .select("completed_at")
@@ -82,53 +46,52 @@ export default async function LessonPage({
     .eq("student_id", profile.id)
     .maybeSingle();
 
-  const signed = async (path: string | null) => {
-    if (!path) return null;
-    const { data } = await supabase.storage.from("recordings").createSignedUrl(path, 3600);
-    return data?.signedUrl ?? null;
-  };
+  const isPractice = lesson.kind === "practice";
+  const target = lesson.target_seconds ?? 120;
+  const focus = FOCUS[lesson.activity_key ?? ""] ?? [];
+  const meta = unitMeta(lesson.unit);
 
-  const latestUrl = await signed(latest?.file_path ?? null);
-
-  const others = await Promise.all(
-    (othersRaw ?? []).map(async (s: any) => ({ ...s, url: await signed(s.file_path) }))
+  const header = (
+    <div className="card">
+      <Link className="btn ghost sm" href={isPractice ? "/activities" : "/units"}>
+        ← {isPractice ? "All activities" : "The units"}
+      </Link>
+      <div className="spread" style={{ marginTop: 12 }}>
+        <h3 style={{ fontSize: 19 }}>{lesson.title}</h3>
+        <span className="pill" style={{ background: meta.colour, color: "#fff" }}>Unit {lesson.unit}</span>
+      </div>
+      {isPractice && (
+        <p className="tiny muted" style={{ marginTop: 6 }}>
+          Prepare {mmss(lesson.prep_seconds ?? 0)} · speak {mmss(target)} · two attempts
+        </p>
+      )}
+      <div style={{ marginTop: 12 }} className="lesson-body">
+        <Prose text={lesson.body} />
+      </div>
+      {focus.length > 0 && (
+        <div className="row" style={{ marginTop: 12 }}>
+          {focus.map((f) => (
+            <span key={f} className={`pill ${CRIT_CLASS[f]}`}>
+              {RB[f].n}. {RB[f].name.split(" and ")[0]}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 
-  const focus = RUBRIC; // every practice task is marked on all five
-
-  return (
+  const mediaCards = (
     <>
-      <div className="card">
-        <Link className="btn ghost sm" href={`/learn/${lesson.course_id}`}>
-          ← Back to the course
-        </Link>
-        <div className="spread" style={{ marginTop: 12 }}>
-          <h3 style={{ fontSize: 19 }}>{lesson.title}</h3>
-          <span className="pill">Unit {lesson.unit}</span>
-        </div>
-        {lesson.kind === "practice" && lesson.target_seconds && (
-          <p className="tiny muted" style={{ marginTop: 6 }}>
-            Prepare {mmss(lesson.prep_seconds ?? 0)} · speak {mmss(lesson.target_seconds)}
-          </p>
-        )}
-        <div style={{ marginTop: 12 }}>
-          <Prose text={lesson.body} />
-        </div>
-      </div>
-
-      {/* uploaded audio and video */}
       {media?.map((m: any) => (
         <div className="card" key={m.id}>
           <h3>{m.title}</h3>
-          {m.external_url ? (
-            m.kind === "video" ? (
-              <video className="play" controls src={m.external_url} style={{ marginTop: 10 }} />
+          <div style={{ marginTop: 10 }}>
+            {m.external_url ? (
+              <MediaPlayer src={m.external_url} video={m.kind === "video"} />
             ) : (
-              <audio controls src={m.external_url} style={{ marginTop: 10 }} />
-            )
-          ) : (
-            <MediaFromStorage path={m.storage_path} kind={m.kind} />
-          )}
+              <MediaFromStorage path={m.storage_path} kind={m.kind} />
+            )}
+          </div>
           {m.transcript && (
             <details style={{ marginTop: 10 }}>
               <summary className="small muted" style={{ cursor: "pointer" }}>Transcript</summary>
@@ -137,8 +100,6 @@ export default async function LessonPage({
           )}
         </div>
       ))}
-
-      {/* video lesson with a link rather than an upload */}
       {lesson.kind === "video" && lesson.video_url && (
         <div className="card">
           <VideoEmbed url={lesson.video_url} />
@@ -147,114 +108,234 @@ export default async function LessonPage({
           </p>
         </div>
       )}
+    </>
+  );
 
-      {/* the practice studio */}
-      {lesson.kind === "practice" && (
+  const staff = profile.role !== "student";
+
+  if (!isPractice) {
+    return (
+      <>
+        {staff && <PreviewBanner />}
+        {header}
+        {mediaCards}
+        {staff ? (
+          <div className="card">
+            <button className="btn block" disabled>Mark as complete</button>
+            <p className="tiny muted center" style={{ marginTop: 6 }}>Students tick off reading and video lessons here.</p>
+          </div>
+        ) : (
+          <CompleteButton lessonId={lesson.id} studentId={profile.id} done={!!done} />
+        )}
+      </>
+    );
+  }
+
+  // ---- speaking task -------------------------------------------------------
+
+  const { data: enrolment } = await supabase
+    .from("enrolments")
+    .select("section_id, sections!inner(course_id)")
+    .eq("student_id", profile.id)
+    .eq("status", "active")
+    .eq("sections.course_id", lesson.course_id)
+    .limit(1)
+    .maybeSingle();
+
+  const sectionId = (enrolment as any)?.section_id ?? null;
+
+  const { data: mineRaw } = await supabase
+    .from("submissions")
+    .select(
+      "id, attempt_no, transcript, duration_seconds, file_path, file_purged_at, created_at, section_id, " +
+        "feedback(id, source, author_id, scores, strengths, improve, created_at, author:profiles!feedback_author_id_fkey(full_name)), " +
+        "submission_shares(shared_with)"
+    )
+    .eq("lesson_id", lesson.id)
+    .eq("student_id", profile.id)
+    .order("attempt_no");
+
+  const mine = (mineRaw ?? []) as any[];
+  const ids = mine.map((s) => s.id);
+
+  const { data: marks } = ids.length
+    ? await supabase.from("current_grades").select("submission_id, total, per_criterion, comment, created_at").in("submission_id", ids)
+    : { data: [] as any[] };
+
+  const markFor = (id: string) => (marks ?? []).find((m: any) => m.submission_id === id) ?? null;
+
+  const { data: classmatesRaw } = sectionId
+    ? await supabase.rpc("classmates_in_section", { section: sectionId })
+    : { data: [] as any[] };
+  const classmates = (classmatesRaw ?? []) as { id: string; full_name: string }[];
+
+  const signed = async (path: string | null) => {
+    if (!path) return null;
+    const { data } = await supabase.storage.from("recordings").createSignedUrl(path, 3600);
+    return data?.signedUrl ?? null;
+  };
+
+  const attempts = await Promise.all(mine.map(async (s) => ({ ...s, url: await signed(s.file_path) })));
+
+  // recordings of this task that classmates have shared with me
+  const { data: sharedRaw } = await supabase
+    .from("submission_shares")
+    .select(
+      "created_at, submission:submissions!inner(id, lesson_id, attempt_no, duration_seconds, created_at, " +
+        "owner:profiles!submissions_student_id_fkey(full_name), feedback(author_id))"
+    )
+    .eq("shared_with", profile.id)
+    .eq("submission.lesson_id", lesson.id);
+  const shared = ((sharedRaw ?? []) as any[]).filter((x) => x.submission);
+
+  const usedFinal = mine.some((s) => s.attempt_no >= MAX_ATTEMPTS);
+  const nextAttempt = usedFinal ? 0 : mine.some((s) => s.attempt_no === 1) ? 2 : 1;
+
+  // staff who are not in a class of this course see the student view without saving
+  const previewOnly = staff && !sectionId;
+
+  return (
+    <>
+      {staff && <PreviewBanner saving={!previewOnly} />}
+      {header}
+      {mediaCards}
+
+      {previewOnly ? (
         <>
-          {!sectionId ? (
-            <div className="card">
-              <h3>Not enrolled in a section</h3>
-              <p className="small muted">
-                Recordings belong to a class, so you need to be enrolled in a section of this course
-                before you can submit one. Ask your teacher for a join link.
-              </p>
-            </div>
-          ) : (
-            <PracticeRecorder
-              lessonId={lesson.id}
-              sectionId={sectionId}
-              studentId={profile.id}
-              prepSeconds={lesson.prep_seconds ?? 120}
-              targetSeconds={lesson.target_seconds ?? 120}
-              attemptNo={(mine?.length ?? 0) + 1}
-            />
-          )}
-
-          {latest && (
-            <div className="card">
-              <div className="spread">
-                <h3>Your latest attempt</h3>
-                <span className="tiny muted">
-                  attempt {latest.attempt_no} · {mmss(latest.duration_seconds ?? 0)} ·{" "}
-                  {new Date(latest.created_at).toLocaleDateString()}
-                </span>
-              </div>
-              {latestUrl && <audio controls src={latestUrl} style={{ marginTop: 10 }} />}
-
-              <div style={{ marginTop: 14 }}>
-                <h3 style={{ fontSize: 14 }}>Feedback</h3>
-                {feedback?.length ? (
-                  feedback.map((f: any) => {
-                    const t = totalOf(f.scores);
-                    return (
-                      <div
-                        key={f.id}
-                        style={{ borderTop: "1px solid var(--rule)", paddingTop: 10, marginTop: 10 }}
-                      >
-                        <div className="spread">
-                          <b className="small">
-                            {f.source === "ai" ? "AI" : f.source === "teacher" ? "Teacher" : "Partner"}
-                          </b>
-                          {t !== null && <span className="pill">{t}/20</span>}
-                        </div>
-                        {RUBRIC.filter((c) => f.scores?.[c.id]).map((c) => (
-                          <div className="score-row" key={c.id}>
-                            <span className="nm">{c.n}. {c.name}</span>
-                            <div className="rbar"><i style={{ width: `${(f.scores[c.id] / 4) * 100}%` }} /></div>
-                            <b className="small">{f.scores[c.id]}</b>
-                          </div>
-                        ))}
-                        {f.strengths && <p className="small"><b>Strengths:</b> {f.strengths}</p>}
-                        {f.improve && <p className="small"><b>Work on:</b> {f.improve}</p>}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="small muted">
-                    None yet. A classmate in your section can score this, and you can ask for AI feedback
-                    once they have.
-                  </p>
-                )}
-              </div>
-
-              <AiFeedbackButton
-                submissionId={latest.id}
-                hasPeer={!!feedback?.some((f: any) => f.source === "peer" || f.source === "teacher")}
-                hasAi={!!feedback?.some((f: any) => f.source === "ai")}
-                hasTranscript={!!latest.transcript?.trim()}
-              />
-            </div>
-          )}
-
-          {others.length > 0 && (
-            <div className="card">
-              <h3>Review a classmate</h3>
-              <p className="small muted">
-                Listen, then score against the rubric. You cannot score your own recording.
-              </p>
-              {others.map((s: any) => (
-                <details key={s.id} style={{ marginTop: 12 }}>
-                  <summary className="small" style={{ cursor: "pointer", fontWeight: 600 }}>
-                    An attempt from {new Date(s.created_at).toLocaleDateString()} · {mmss(s.duration_seconds ?? 0)}
-                  </summary>
-                  <div style={{ marginTop: 10 }}>
-                    {s.url && <audio controls src={s.url} />}
-                    <PeerFeedback
-                      submissionId={s.id}
-                      authorId={profile.id}
-                      source={profile.role === "student" ? "peer" : "teacher"}
-                    />
-                  </div>
-                </details>
-              ))}
-            </div>
-          )}
+          <PracticeRecorder
+            lessonId={lesson.id}
+            sectionId=""
+            studentId={profile.id}
+            prepSeconds={lesson.prep_seconds ?? 120}
+            targetSeconds={target}
+            nextAttempt={1}
+            preview
+          />
+          <SampleAttempt target={target} />
         </>
+      ) : !sectionId ? (
+        <div className="card">
+          <h3>Not in a class yet</h3>
+          <p className="small muted">
+            Recordings belong to a class, so you need to join one before you can record. Open the class link from
+            your teacher.
+          </p>
+        </div>
+      ) : nextAttempt === 0 ? (
+        <div className="card">
+          <h3>Both attempts used</h3>
+          <p className="small muted">
+            You have saved your two attempts for this task. Share them with a classmate below, or ask for AI feedback
+            once someone has scored you.
+          </p>
+        </div>
+      ) : (
+        <PracticeRecorder
+          key={`attempt-${nextAttempt}-${mine.length}`}
+          lessonId={lesson.id}
+          sectionId={sectionId}
+          studentId={profile.id}
+          prepSeconds={lesson.prep_seconds ?? 120}
+          targetSeconds={target}
+          nextAttempt={nextAttempt}
+        />
       )}
 
-      {/* reading and video lessons are marked complete by hand */}
-      {lesson.kind !== "practice" && (
-        <CompleteButton lessonId={lesson.id} studentId={profile.id} done={!!done} />
+      {attempts.map((s) => {
+        const fb = (s.feedback ?? []) as FeedbackRow[];
+        const m = metricsOf(s.transcript, s.duration_seconds ?? 0, target);
+        const mark = markFor(s.id);
+        const isFinal = s.attempt_no >= MAX_ATTEMPTS;
+        return (
+          <div className="card" key={s.id} id={`attempt-${s.attempt_no}`}>
+            <div className="spread">
+              <h3>Attempt {s.attempt_no}</h3>
+              <span className={`pill ${isFinal ? "c3" : "c5"}`}>{isFinal ? "Final" : "Attempt 1"}</span>
+            </div>
+            <div className="meta">
+              {mmss(s.duration_seconds)} of {mmss(target)} · {fmtDate(s.created_at)}
+            </div>
+
+            <div style={{ marginTop: 10 }}>
+              {s.url ? (
+                <MediaPlayer src={s.url} video={isVideoPath(s.file_path)} />
+              ) : (
+                <p className="small muted">
+                  {s.file_purged_at ? "The audio was deleted under the one-year retention policy." : "The file could not be loaded."}
+                </p>
+              )}
+            </div>
+
+            <div className="note" style={{ marginTop: 10 }}>
+              <b>{mmss(m.secs)}</b> spoken · target {mmss(m.target)} — <b>{m.timing}</b>
+              {m.wpm ? <> · about <b>{m.wpm}</b> words per minute ({paceLabel(m.wpm)})</> : null}
+              {m.words ? <> · {m.fillers} filler word{m.fillers === 1 ? "" : "s"}</> : null}
+            </div>
+
+            {s.transcript && (
+              <details style={{ marginTop: 10 }}>
+                <summary className="small" style={{ cursor: "pointer", fontWeight: 600, color: "var(--ink)" }}>Transcript</summary>
+                <p className="small" style={{ whiteSpace: "pre-wrap", margin: "8px 0 0" }}>{s.transcript}</p>
+              </details>
+            )}
+
+            <div className="row" style={{ marginTop: 12 }}>
+              {isFinal ? (
+                <span className="lock">🔒 Final attempt · kept, cannot be deleted</span>
+              ) : !mark ? (
+                <DeleteAttempt submissionId={s.id} filePath={s.file_path} />
+              ) : (
+                <span className="lock">Marked, so it is kept</span>
+              )}
+            </div>
+
+            <SharePanel
+              submissionId={s.id}
+              classmates={classmates}
+              sharedWith={(s.submission_shares ?? []).map((x: any) => x.shared_with)}
+            />
+
+            <div className="sep">
+              <h3 style={{ fontSize: 14 }}>Feedback</h3>
+              <FeedbackList
+                feedback={fb}
+                mark={mark}
+                viewerId={profile.id}
+                emptyText="None yet. Share this recording with a classmate and their scores appear here."
+              />
+              <AiFeedbackButton
+                submissionId={s.id}
+                hasPeer={fb.some((f) => f.source === "peer" || f.source === "teacher")}
+                hasAi={fb.some((f) => f.source === "ai")}
+                hasTranscript={!!s.transcript?.trim()}
+                auto={process.env.AI_FEEDBACK_AUTO === "on" && !!process.env.ANTHROPIC_API_KEY}
+              />
+            </div>
+          </div>
+        );
+      })}
+
+      {shared.length > 0 && (
+        <div className="card">
+          <h3>Shared with you for this task</h3>
+          <p className="small muted">Listen, then score against the rubric.</p>
+          <div style={{ marginTop: 6 }}>
+            {shared.map((x: any) => {
+              const s = x.submission;
+              const reviewed = (s.feedback ?? []).some((f: any) => f.author_id === profile.id);
+              return (
+                <Link key={s.id} className="attrow" href={`/review/${s.id}`}>
+                  <div className="grow">
+                    <b className="small">{s.owner?.full_name ?? "Classmate"}</b>
+                    <div className="tiny muted">attempt {s.attempt_no} · {mmss(s.duration_seconds)} · shared {fmtDate(x.created_at)}</div>
+                  </div>
+                  <span className={`pill ${reviewed ? "c2" : "c5"}`}>{reviewed ? "Reviewed" : "Needs feedback"}</span>
+                  <span className="muted">›</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       )}
     </>
   );
@@ -265,11 +346,7 @@ async function MediaFromStorage({ path, kind }: { path: string | null; kind: str
   const supabase = serverClient();
   const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600);
   if (!data?.signedUrl) return <p className="small muted">This file could not be loaded.</p>;
-  return kind === "video" ? (
-    <video className="play" controls src={data.signedUrl} style={{ marginTop: 10 }} />
-  ) : (
-    <audio controls src={data.signedUrl} style={{ marginTop: 10 }} />
-  );
+  return <MediaPlayer src={data.signedUrl} video={kind === "video"} />;
 }
 
 function VideoEmbed({ url }: { url: string }) {

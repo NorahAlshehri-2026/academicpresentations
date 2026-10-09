@@ -1,7 +1,8 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { currentProfile, homeFor } from "@/app/_lib/supabase";
+import { currentProfile, serverClient } from "@/app/_lib/supabase";
+import SiteNav from "@/app/_components/SiteNav";
 
 /**
  * Every page reads the database, and what it reads changes as you teach:
@@ -17,10 +18,17 @@ export const metadata: Metadata = {
     "Learn to plan, structure and deliver academic presentations. Timed practice, peer review and feedback against a marking rubric.",
 };
 
+const ROLE_LABEL = { student: "Student", teacher: "Teacher", admin: "Administrator" } as const;
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let profile = null;
+  let isOwner = false;
   try {
     profile = await currentProfile();
+    if (profile?.role === "admin") {
+      const { data } = await serverClient().rpc("is_owner");
+      isOwner = data === true;
+    }
   } catch {
     // Supabase not configured yet — the public pages still render
   }
@@ -31,34 +39,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="sitehead">
           <div className="inner">
             <Link className="brand" href="/">
-              <span className="mk">A</span>
+              <span className="mk">P</span>
               <span>
                 <b>Academic Presentations</b>
-                <i>Online academy</i>
+                <i>
+                  {profile
+                    ? `${profile.full_name} · ${isOwner ? "Academy owner" : ROLE_LABEL[profile.role]}`
+                    : "Online academy"}
+                </i>
               </span>
             </Link>
-            <nav className="sitenav">
-              <Link href="/courses">Courses</Link>
-              {profile ? (
-                <>
-                  <Link href={homeFor(profile.role)} className="cta">
-                    {profile.role === "student" ? "My learning" : "Dashboard"}
-                  </Link>
-                  <form action="/auth/signout" method="post">
-                    <button type="submit">Sign out</button>
-                  </form>
-                </>
-              ) : (
-                <Link href="/login" className="cta">
-                  Sign in
-                </Link>
-              )}
-            </nav>
+            <SiteNav role={profile?.role ?? null} isOwner={isOwner} />
           </div>
         </header>
         <main>
           <div className="wrap">{children}</div>
         </main>
+        <footer className="sitefoot">
+          Foundations of Academic Presentations
+          <br />
+          <span className="tiny">
+            Recordings are private: only you, your teacher and the classmates you share with can play them.
+          </span>
+        </footer>
       </body>
     </html>
   );

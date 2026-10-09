@@ -30,7 +30,7 @@ function LoginForm() {
       return;
     }
 
-    router.push(params.get("next") || "/dashboard");
+    router.push(params.get("next") || "/");
     router.refresh();
   }
 
