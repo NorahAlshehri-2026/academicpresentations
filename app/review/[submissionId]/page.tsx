@@ -112,6 +112,7 @@ export default async function ReviewPage({ params }: { params: { submissionId: s
           markerId={profile.id}
           existing={mine}
           alreadyMarked={mark ? (mark as any).total : null}
+          activityKey={sub.lesson?.activity_key}
         />
       ) : (
         <PeerFeedback submissionId={sub.id} authorId={profile.id} existing={mine} activityKey={sub.lesson?.activity_key} />
