@@ -1,5 +1,6 @@
 import { RUBRIC, band } from "@/app/_lib/rubric";
 import { fmtDate } from "@/app/_lib/format";
+import { decodeObjectives, RATINGS } from "@/app/_lib/objectives";
 
 export type FeedbackRow = {
   id: string;
@@ -72,7 +73,23 @@ export default function FeedbackList({
                   <b className="small">{f.scores![c.id]}</b>
                 </div>
               ))}
-              {f.strengths && <p className="small" style={{ margin: "6px 0 0" }}><b>What worked:</b> {f.strengths}</p>}
+              {(() => {
+                const { checks, text } = decodeObjectives(f.strengths);
+                return (
+                  <>
+                    {checks.map(([o, r]) => {
+                      const R = RATINGS.find((x) => x.id === r)!;
+                      return (
+                        <div className="score-row" key={o} style={{ margin: "6px 0" }}>
+                          <span className="nm">{o}</span>
+                          <span className={`pill ${R.cls}`}>{R.mark} {R.label}</span>
+                        </div>
+                      );
+                    })}
+                    {text && <p className="small" style={{ margin: "6px 0 0" }}><b>What worked:</b> {text}</p>}
+                  </>
+                );
+              })()}
               {f.improve && <p className="small" style={{ margin: "6px 0 0" }}><b>Next time:</b> {f.improve}</p>}
             </div>
           );
