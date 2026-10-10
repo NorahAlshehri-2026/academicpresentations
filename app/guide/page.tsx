@@ -42,7 +42,7 @@ export default function GuidePage() {
         <h3>Sharing and feedback</h3>
         <ol className="guide">
           <li>Under your saved attempt (or from <b>My recordings</b>), tap <b>Share</b> next to a classmate&rsquo;s name. That is all.</li>
-          <li>Your classmate finds it under <b>Shared with me</b>, listens, and scores it against the rubric.</li>
+          <li>Your classmate finds it under <b>Shared with me</b>, listens, and checks it against the lesson objectives with written comments. Only the final presentation in the last unit is scored on the full rubric.</li>
           <li>
             Their feedback appears on your attempt. Your teacher can hear and mark all your recordings without you
             sharing them.
