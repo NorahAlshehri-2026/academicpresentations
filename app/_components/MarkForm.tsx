@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { browserClient } from "@/app/_lib/supabase-browser";
 import { RUBRIC } from "@/app/_lib/rubric";
-import { ScorePicker } from "./PeerFeedback";
+import { ScorePicker, ObjectivePicker } from "./PeerFeedback";
+import { objectivesFor, objectivesTotal, encodeObjectives, decodeObjectives, type Rating } from "@/app/_lib/objectives";
 
 type Existing = {
   id: string;
@@ -18,33 +19,44 @@ type Existing = {
  * the mark out of 20, which goes into the gradebook; the comments go to the
  * student with it. Changing a mark keeps the old one in the history and asks
  * for a reason, which the database insists on.
+ *
+ * In units 1–4 the teacher checks the task's lesson objectives instead, and
+ * the mark out of 20 is worked out from them automatically (Yes = full credit,
+ * Partly = half, Not yet = none). The final presentation uses the rubric.
  */
 export default function MarkForm({
   submissionId,
   markerId,
   existing,
   alreadyMarked,
+  activityKey,
 }: {
   submissionId: string;
   markerId: string;
   existing: Existing;
   alreadyMarked: number | null;
+  activityKey?: string | null;
 }) {
   const router = useRouter();
+  const objectives = objectivesFor(activityKey);
+  const prior = decodeObjectives(existing?.strengths);
   const [scores, setScores] = useState<Record<string, number>>({ ...(existing?.scores ?? {}) });
-  const [strengths, setStrengths] = useState(existing?.strengths ?? "");
+  const [checks, setChecks] = useState<Record<string, Rating>>(Object.fromEntries(prior.checks));
+  const [strengths, setStrengths] = useState(prior.text);
   const [improve, setImprove] = useState(existing?.improve ?? "");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const complete = RUBRIC.every((c) => scores[c.id]);
-  const total = RUBRIC.reduce((a, c) => a + (scores[c.id] ?? 0), 0);
+  const complete = objectives ? objectives.every((o) => checks[o]) : RUBRIC.every((c) => scores[c.id]);
+  const total = objectives
+    ? objectivesTotal(objectives.map((o) => checks[o]))
+    : RUBRIC.reduce((a, c) => a + (scores[c.id] ?? 0), 0);
 
   async function save() {
     if (!complete) {
-      setError("Score all five criteria to give a mark out of 20.");
+      setError(objectives ? "Choose Yes, Partly or Not yet for every objective." : "Score all five criteria to give a mark out of 20.");
       return;
     }
     if (alreadyMarked !== null && alreadyMarked !== total && !reason.trim()) {
@@ -56,10 +68,22 @@ export default function MarkForm({
     setSaved(false);
     const supabase = browserClient();
 
-    const body = { scores, strengths: strengths.trim() || null, improve: improve.trim() || null };
-    const fb = existing
-      ? await supabase.from("feedback").update(body).eq("id", existing.id)
-      : await supabase.from("feedback").insert({ ...body, submission_id: submissionId, author_id: markerId, source: "teacher" });
+    const body = objectives
+      ? {
+          scores: null as any,
+          strengths: encodeObjectives(objectives.map((o) => [o, checks[o]] as [string, Rating]), strengths),
+          improve: improve.trim() || null,
+        }
+      : { scores, strengths: strengths.trim() || null, improve: improve.trim() || null };
+    const writeFb = (b: typeof body) =>
+      existing
+        ? supabase.from("feedback").update(b).eq("id", existing.id)
+        : supabase.from("feedback").insert({ ...b, submission_id: submissionId, author_id: markerId, source: "teacher" });
+    let fb = await writeFb(body);
+    // if the database insists on a scores value, an empty set means "not scored"
+    if (fb.error && objectives && /scores|null value|check constraint/i.test(fb.error.message)) {
+      fb = await writeFb({ ...body, scores: {} });
+    }
 
     if (fb.error) {
       setBusy(false);
@@ -69,14 +93,18 @@ export default function MarkForm({
 
     if (alreadyMarked === null || alreadyMarked !== total || reason.trim()) {
       const comment = [strengths.trim(), improve.trim() && `Next time: ${improve.trim()}`].filter(Boolean).join(" ");
-      const { error: g } = await supabase.from("grades").insert({
+      const grade = {
         submission_id: submissionId,
         marker_id: markerId,
         total,
-        per_criterion: scores,
+        per_criterion: (objectives ? null : scores) as Record<string, number> | null,
         comment: comment || null,
         reason: alreadyMarked !== null ? reason.trim() : null,
-      });
+      };
+      let { error: g } = await supabase.from("grades").insert(grade);
+      if (g && objectives && /per_criterion|null value|check constraint/i.test(g.message)) {
+        ({ error: g } = await supabase.from("grades").insert({ ...grade, per_criterion: {} }));
+      }
       if (g) {
         setBusy(false);
         setError(g.message.includes("requires a reason") ? "Say why you are changing the mark." : g.message);
@@ -99,11 +127,22 @@ export default function MarkForm({
           <span className="small muted">/20</span>
         </span>
       </div>
-      <p className="tiny muted">
-        Score all five criteria. The total goes into the gradebook; the comments go to the student.
-      </p>
-
-      <ScorePicker scores={scores} onPick={(id, n) => setScores({ ...scores, [id]: n })} />
+      {objectives ? (
+        <>
+          <p className="tiny muted">
+            Check each lesson objective. The mark is worked out automatically (Yes = full credit, Partly = half,
+            Not yet = none) and goes into the gradebook; the comments go to the student.
+          </p>
+          <ObjectivePicker objectives={objectives} checks={checks} onPick={(o, r) => setChecks({ ...checks, [o]: r })} />
+        </>
+      ) : (
+        <>
+          <p className="tiny muted">
+            Score all five criteria. The total goes into the gradebook; the comments go to the student.
+          </p>
+          <ScorePicker scores={scores} onPick={(id, n) => setScores({ ...scores, [id]: n })} />
+        </>
+      )}
 
       <label className="fld" htmlFor={`ms-${submissionId}`}>What worked</label>
       <textarea id={`ms-${submissionId}`} value={strengths} onChange={(e) => setStrengths(e.target.value)} />
