@@ -46,6 +46,40 @@ export function ScorePicker({
   );
 }
 
+/** Yes / Partly / Not yet for each lesson objective (units 1–4). */
+export function ObjectivePicker({
+  objectives,
+  checks,
+  onPick,
+}: {
+  objectives: string[];
+  checks: Record<string, Rating>;
+  onPick: (objective: string, r: Rating) => void;
+}) {
+  return (
+    <>
+      {objectives.map((o, i) => (
+        <div className="score-row" key={o} style={{ flexWrap: "wrap" }}>
+          <span className="nm" style={{ minWidth: 200 }}>{i + 1}. {o}</span>
+          <span className="seg">
+            {RATINGS.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                aria-pressed={checks[o] === r.id}
+                onClick={() => onPick(o, r.id)}
+                style={{ width: "auto", padding: "0 10px", fontSize: 12.5 }}
+              >
+                {r.label}
+              </button>
+            ))}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 /**
  * A classmate's feedback on a recording that was shared with them. In units
  * 1–4 it is checked against the task's lesson objectives plus written
@@ -129,24 +163,7 @@ export default function PeerFeedback({
       {objectives ? (
         <>
           <p className="tiny muted">Check the speaker against this lesson&rsquo;s objectives, then write your comments.</p>
-          {objectives.map((o, i) => (
-            <div className="score-row" key={o} style={{ flexWrap: "wrap" }}>
-              <span className="nm" style={{ minWidth: 200 }}>{i + 1}. {o}</span>
-              <span className="seg">
-                {RATINGS.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    aria-pressed={checks[o] === r.id}
-                    onClick={() => setChecks({ ...checks, [o]: r.id })}
-                    style={{ width: "auto", padding: "0 10px", fontSize: 12.5 }}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </span>
-            </div>
-          ))}
+          <ObjectivePicker objectives={objectives} checks={checks} onPick={(o, r) => setChecks({ ...checks, [o]: r })} />
         </>
       ) : (
         <>
