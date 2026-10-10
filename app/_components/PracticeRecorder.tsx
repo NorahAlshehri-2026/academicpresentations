@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { browserClient } from "@/app/_lib/supabase-browser";
 import { metricsOf, mmss, paceLabel } from "@/app/_lib/format";
+import { transcribeOnDevice } from "@/app/_lib/transcribe";
 
 type Props = {
   lessonId: string;
@@ -18,6 +19,21 @@ type Props = {
 };
 
 const OVERRUN = 45; // seconds past the target before the clock stops itself
+
+/**
+ * iPad, iPhone and Safari. There the microphone cannot be shared: live speech
+ * recognition takes it from the recorder and the recording comes out broken
+ * or silent. So on these devices the recorder has the microphone to itself
+ * and the transcript is written on the device after the recording stops.
+ * Every other browser works exactly as before.
+ */
+function isAppleBrowser() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const appleMobile = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(ua);
+  return appleMobile || safari;
+}
 
 /** Browser recordings often carry no length; this makes the player show it and allow seeking. */
 function fixDuration(el: HTMLMediaElement | null) {
@@ -59,6 +75,9 @@ export default function PracticeRecorder({
   const [recordedVideo, setRecordedVideo] = useState(false);
 
   const [transcript, setTranscript] = useState("");
+  /** on iPad/Safari, after recording: what the on-device transcriber is doing ("" when idle) */
+  const [transcribing, setTranscribing] = useState("");
+  const [transcribeFailed, setTranscribeFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -125,9 +144,14 @@ export default function PracticeRecorder({
       if (!alive.current) { media.getTracks().forEach((t) => t.stop()); return; }
     }
 
-    const types = useVideo
-      ? ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"]
-      : ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+    const apple = isAppleBrowser();
+    setTranscribeFailed(false);
+    // Safari records and plays MP4 reliably; other browsers keep WebM as before
+    const types = apple
+      ? useVideo ? ["video/mp4", "video/webm"] : ["audio/mp4", "audio/webm"]
+      : useVideo
+        ? ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"]
+        : ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
     const mime = types.find((t) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t));
     const opts: MediaRecorderOptions = { audioBitsPerSecond: 48000 };
     if (useVideo) opts.videoBitsPerSecond = 600000;
@@ -144,9 +168,11 @@ export default function PracticeRecorder({
       setPlayback(URL.createObjectURL(b));
       stream.current?.getTracks().forEach((t) => t.stop());
       setPhase("done");
+      if (apple) transcribeAfter(b);
     };
 
-    mr.start(1000);
+    // Safari writes a broken file when it records in one-second slices
+    if (apple) mr.start(); else mr.start(1000);
     started.current = Date.now();
     setPhase("recording");
 
@@ -156,7 +182,28 @@ export default function PracticeRecorder({
       if (secs >= targetSeconds + OVERRUN) stop();
     }, 200);
 
-    startSpeech();
+    if (!apple) startSpeech();
+  }
+
+  async function transcribeAfter(b: Blob) {
+    setTranscribing("Writing your transcript…");
+    try {
+      const text = await transcribeOnDevice(b, (st) => {
+        if (!alive.current) return;
+        setTranscribing(
+          st.stage === "download"
+            ? `Getting the transcriber ready (first time only, use Wi-Fi) · ${st.percent}%`
+            : "Writing your transcript…"
+        );
+      });
+      if (!alive.current) return;
+      setTranscript((cur) => (cur.trim() ? cur : text)); // keep anything typed while waiting
+      if (!text) setTranscribeFailed(true);
+    } catch {
+      if (alive.current) setTranscribeFailed(true);
+    } finally {
+      if (alive.current) setTranscribing("");
+    }
   }
 
   function startSpeech() {
@@ -305,7 +352,7 @@ export default function PracticeRecorder({
         <div className="bar"><i className={over ? "over" : ""} style={{ width: `${phase === "idle" ? 0 : pct}%` }} /></div>
 
         <div className="row" style={{ marginTop: 14, justifyContent: "center" }}>
-          <button className="btn rec" onClick={start} disabled={busy || saving}>
+          <button className="btn rec" onClick={start} disabled={busy || saving || !!transcribing}>
             ● {blob ? "Record again" : "Start recording"}
           </button>
           <button className="btn ghost" onClick={stop} disabled={phase !== "recording"}>Stop</button>
@@ -348,6 +395,17 @@ export default function PracticeRecorder({
               placeholder="Fills in automatically in Chrome. Otherwise type roughly what you said."
               style={{ minHeight: 110 }}
             />
+            {transcribing && (
+              <p className="tiny muted" style={{ marginTop: 6 }}>
+                <span className="dot" /> {transcribing}
+              </p>
+            )}
+            {transcribeFailed && !transcribing && !transcript.trim() && (
+              <p className="tiny muted" style={{ marginTop: 6 }}>
+                The transcript could not be written automatically. Type roughly what you said before saving, or there
+                will be nothing for the AI feedback to read.
+              </p>
+            )}
 
             {preview ? (
               <>
@@ -363,9 +421,9 @@ export default function PracticeRecorder({
                 className={`btn block${final ? " gold" : ""}`}
                 style={{ marginTop: 14 }}
                 onClick={save}
-                disabled={saving}
+                disabled={saving || !!transcribing}
               >
-                {saving ? "Uploading…" : `Save attempt ${nextAttempt}`}
+                {saving ? "Uploading…" : transcribing ? "Waiting for the transcript…" : `Save attempt ${nextAttempt}`}
               </button>
             )}
           </>
