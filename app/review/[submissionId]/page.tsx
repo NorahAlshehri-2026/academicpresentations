@@ -24,7 +24,7 @@ export default async function ReviewPage({ params }: { params: { submissionId: s
     .from("submissions")
     .select(
       "id, student_id, section_id, attempt_no, transcript, duration_seconds, file_path, file_purged_at, created_at, " +
-        "lesson:lessons(id, course_id, title, body, target_seconds), " +
+        "lesson:lessons(id, course_id, title, body, target_seconds, activity_key), " +
         "owner:profiles!submissions_student_id_fkey(full_name), " +
         "feedback(id, source, author_id, scores, strengths, improve, created_at, author:profiles!feedback_author_id_fkey(full_name))"
     )
@@ -114,7 +114,7 @@ export default async function ReviewPage({ params }: { params: { submissionId: s
           alreadyMarked={mark ? (mark as any).total : null}
         />
       ) : (
-        <PeerFeedback submissionId={sub.id} authorId={profile.id} existing={mine} />
+        <PeerFeedback submissionId={sub.id} authorId={profile.id} existing={mine} activityKey={sub.lesson?.activity_key} />
       )}
 
       <div className="card">
