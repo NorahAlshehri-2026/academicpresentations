@@ -299,3 +299,91 @@ td a { text-decoration: none; font-weight: 600; }
   border-top: 1px solid var(--rule); padding: 20px 16px 36px; color: var(--muted);
   font-size: 12.5px; text-align: center;
 }
+
+/* =====================================================================
+   Colour layer (October 2026) — brighter accents, same navy/gold brand
+   ===================================================================== */
+:root {
+  --coral: #d9573b;
+  --sky: #2f7fd1;
+  --bg: #f3f6fb;
+  --accent: var(--teal);
+  --rainbow: linear-gradient(90deg, #2f7fd1, #1f7a8c, #2e6b3e, #b8860f, #d9573b, #5b3a8c);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --coral: #ef8a6f; --sky: #79b4f0; --bg: #0c121b; }
+}
+
+body {
+  background:
+    radial-gradient(900px 420px at 100% -10%, rgba(47, 127, 209, .10), transparent 70%),
+    radial-gradient(700px 380px at -10% 20%, rgba(184, 134, 15, .08), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* header: colour band + coloured active tab */
+.sitehead { border-bottom: 0; box-shadow: 0 1px 0 var(--rule); }
+.sitehead::before { content: ""; display: block; height: 4px; background: var(--rainbow); }
+.brand .mk { background: linear-gradient(135deg, var(--ink), var(--teal)); }
+.sitenav a:hover, .sitenav button:hover { color: var(--teal); }
+.sitenav a[aria-current="page"] { background: rgba(31, 122, 140, .13); color: var(--teal); }
+
+/* cards: each gets its own accent colour, cycling */
+.card { border-top: 4px solid var(--accent); }
+.card h3 { color: var(--accent); }
+.card:nth-child(6n+1) { --accent: var(--sky); }
+.card:nth-child(6n+2) { --accent: var(--teal); }
+.card:nth-child(6n+3) { --accent: var(--purple); }
+.card:nth-child(6n+4) { --accent: var(--green); }
+.card:nth-child(6n+5) { --accent: var(--coral); }
+.card:nth-child(6n+6) { --accent: var(--gold); }
+.card[style*="border-left"] { border-top-color: var(--gold); }
+
+/* numbered guide lists: coloured number badges */
+ol.guide { list-style: none; padding-left: 0; counter-reset: g; }
+ol.guide li { counter-increment: g; position: relative; padding-left: 34px; }
+ol.guide li::before {
+  content: counter(g); position: absolute; left: 0; top: -1px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 12px; font-weight: 800;
+  display: grid; place-items: center;
+}
+.card ul li::marker { color: var(--accent); }
+
+/* step circles on the home page */
+.step:nth-child(5n+1) .k { background: var(--sky); color: #fff; }
+.step:nth-child(5n+2) .k { background: var(--teal); color: #fff; }
+.step:nth-child(5n+3) .k { background: var(--purple); color: #fff; }
+.step:nth-child(5n+4) .k { background: var(--green); color: #fff; }
+.step:nth-child(5n+5) .k { background: var(--coral); color: #fff; }
+
+/* hero: richer gradient and a second glow */
+.hero { background: linear-gradient(135deg, #12284a 0%, #1d4f7a 45%, #1f7a8c 75%, #5b3a8c 120%); }
+.hero::before {
+  content: ""; position: absolute; left: -60px; bottom: -90px;
+  width: 220px; height: 220px; border-radius: 50%; background: rgba(217, 87, 59, .22);
+}
+
+/* buttons, tables, bars */
+.btn:not(.ghost):not(.gold):not(.rec) { background: linear-gradient(135deg, var(--ink), var(--teal)); }
+.btn.gold { background: linear-gradient(135deg, #d9a83f, #b8860f); }
+.sitenav a.cta, .sitenav button.cta-out { background: linear-gradient(135deg, var(--ink), var(--teal)); }
+th { background: rgba(31, 122, 140, .12); color: var(--teal); }
+.bar > i { background: linear-gradient(90deg, var(--teal), var(--gold)); }
+.rbar > i { background: linear-gradient(90deg, var(--sky), var(--purple)); }
+.seg button[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); }
+.tabs button[aria-selected="true"] { color: var(--teal); }
+.ucard:nth-child(5n+1) { border-left-color: var(--sky); }
+.ucard:nth-child(5n+2) { border-left-color: var(--teal); }
+.ucard:nth-child(5n+3) { border-left-color: var(--purple); }
+.ucard:nth-child(5n+4) { border-left-color: var(--green); }
+.ucard:nth-child(5n+5) { border-left-color: var(--coral); }
+.sitefoot { border-top: 0; position: relative; }
+.sitefoot::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--rainbow); opacity: .6; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .btn:not(.ghost):not(.gold):not(.rec) { background: linear-gradient(135deg, var(--ink), var(--teal)); color: #08111d; }
+  :root:not([data-theme="light"]) ol.guide li::before,
+  :root:not([data-theme="light"]) .step .k { color: #08111d; }
+}
