@@ -78,6 +78,16 @@ export const RATINGS: { id: Rating; label: string; mark: string; cls: string }[]
 const BY_MARK = Object.fromEntries(RATINGS.map((r) => [r.mark, r.id])) as Record<string, Rating>;
 const MARK_OF = Object.fromEntries(RATINGS.map((r) => [r.id, r.mark])) as Record<Rating, string>;
 
+/**
+ * The automatic mark out of 20 from an objectives checklist:
+ * Yes = full credit, Partly = half, Not yet = none.
+ */
+export function objectivesTotal(ratings: (Rating | undefined)[]): number {
+  if (!ratings.length) return 0;
+  const pts = ratings.reduce((a, r) => a + (r === "yes" ? 1 : r === "partly" ? 0.5 : 0), 0);
+  return Math.round((pts / ratings.length) * 20);
+}
+
 const PREFIX = "Objectives: ";
 
 /**
