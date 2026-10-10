@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { browserClient } from "@/app/_lib/supabase-browser";
 import { metricsOf, mmss, paceLabel } from "@/app/_lib/format";
-import { transcribeOnDevice } from "@/app/_lib/transcribe";
 
 type Props = {
   lessonId: string;
@@ -19,33 +18,6 @@ type Props = {
 };
 
 const OVERRUN = 45; // seconds past the target before the clock stops itself
-
-/**
- * Live speech recognition only where it can share the microphone with the
- * recorder: Chrome and Edge on computers and Android. On iPad, iPhone and in
- * Safari it takes the microphone over and the recording comes out silent, so
- * there the recording is transcribed on the device after it stops.
- */
-function canListenLive() {
-  if (typeof window === "undefined") return false;
-  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  if (!SR) return false;
-  const ua = navigator.userAgent;
-  const appleMobile = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(ua);
-  return !appleMobile && !safari;
-}
-
-/**
- * Recording formats in order of preference. MP4 with AAC audio plays on every
- * browser (Safari, Chrome, Edge, Firefox), so a recording made on one device
- * can be heard on any other; WebM is the fallback where MP4 cannot be recorded.
- */
-const AUDIO_TYPES = ["audio/mp4;codecs=mp4a.40.2", "audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
-const VIDEO_TYPES = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
-
-/** Anything smaller than this is not a real recording. */
-const MIN_BYTES = 2000;
 
 /** Browser recordings often carry no length; this makes the player show it and allow seeking. */
 function fixDuration(el: HTMLMediaElement | null) {
@@ -87,10 +59,6 @@ export default function PracticeRecorder({
   const [recordedVideo, setRecordedVideo] = useState(false);
 
   const [transcript, setTranscript] = useState("");
-  const [autoTranscript, setAutoTranscript] = useState(true);
-  /** after recording on iPad/Safari: "" when idle, otherwise what the transcriber is doing */
-  const [transcribing, setTranscribing] = useState("");
-  const [unplayable, setUnplayable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -101,10 +69,6 @@ export default function PracticeRecorder({
   const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
   const recognition = useRef<any>(null);
   const finalText = useRef("");
-  /** true while recording, so speech recognition restarts itself if the browser stops it on a pause */
-  const listening = useRef(false);
-  /** whether this take is being transcribed live (Chrome) or afterwards on the device */
-  const liveMode = useRef(true);
   const alive = useRef(true);
   const player = useRef<HTMLMediaElement | null>(null);
 
@@ -122,7 +86,6 @@ export default function PracticeRecorder({
       alive.current = false;
       try { if (recorder.current && recorder.current.state !== "inactive") { recorder.current.onstop = null; recorder.current.stop(); } } catch {}
       try { stream.current?.getTracks().forEach((t) => t.stop()); } catch {}
-      listening.current = false;
       try { recognition.current?.stop(); } catch {}
       if (ticker.current) clearInterval(ticker.current);
     };
@@ -151,7 +114,6 @@ export default function PracticeRecorder({
     setTranscript("");
     setBlob(null);
     setPlayback(null);
-    setUnplayable(false);
     setElapsed(0);
     setRecordedVideo(useVideo);
 
@@ -163,7 +125,9 @@ export default function PracticeRecorder({
       if (!alive.current) { media.getTracks().forEach((t) => t.stop()); return; }
     }
 
-    const types = useVideo ? VIDEO_TYPES : AUDIO_TYPES;
+    const types = useVideo
+      ? ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"]
+      : ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
     const mime = types.find((t) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t));
     const opts: MediaRecorderOptions = { audioBitsPerSecond: 48000 };
     if (useVideo) opts.videoBitsPerSecond = 600000;
@@ -176,21 +140,13 @@ export default function PracticeRecorder({
     mr.onstop = () => {
       const type = mr.mimeType || chunks.current[0]?.type || (useVideo ? "video/webm" : "audio/webm");
       const b = new Blob(chunks.current, { type });
-      if (b.size < MIN_BYTES) {
-        stream.current?.getTracks().forEach((t) => t.stop());
-        setPhase("idle");
-        setError("The recording came out empty, so it was not kept. Close other apps that use the microphone, reload the page and record again.");
-        return;
-      }
       setBlob(b);
       setPlayback(URL.createObjectURL(b));
       stream.current?.getTracks().forEach((t) => t.stop());
       setPhase("done");
-      if (!liveMode.current) transcribeAfter(b);
     };
 
-    // No timeslice: Safari can write a broken file when it records in slices.
-    mr.start();
+    mr.start(1000);
     started.current = Date.now();
     setPhase("recording");
 
@@ -203,35 +159,9 @@ export default function PracticeRecorder({
     startSpeech();
   }
 
-  async function transcribeAfter(b: Blob) {
-    setTranscribing("Writing your transcript…");
-    try {
-      const text = await transcribeOnDevice(b, (st) => {
-        if (!alive.current) return;
-        setTranscribing(
-          st.stage === "download"
-            ? `Getting the transcriber ready (first time only) · ${st.percent}%`
-            : "Writing your transcript…"
-        );
-      });
-      if (!alive.current) return;
-      // keep anything the student typed while waiting
-      setTranscript((cur) => (cur.trim() ? cur : text));
-      if (!text) setAutoTranscript(false);
-    } catch {
-      if (alive.current) setAutoTranscript(false);
-    } finally {
-      if (alive.current) setTranscribing("");
-    }
-  }
-
   function startSpeech() {
-    liveMode.current = canListenLive();
-    setAutoTranscript(true);
-    if (!liveMode.current) return; // transcribed after the recording stops
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    setAutoTranscript(true);
-    listening.current = true;
+    if (!SR) return;
     try {
       const sr = new SR();
       sr.lang = "en-GB";
@@ -246,18 +176,7 @@ export default function PracticeRecorder({
         }
         setTranscript((finalText.current + interim).trim());
       };
-      sr.onerror = (e: any) => {
-        // dictation switched off or refused: the student types the transcript instead
-        if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
-          listening.current = false;
-          setAutoTranscript(false);
-        }
-      };
-      // Safari and Chrome stop listening after a pause; carry on until the recording stops
-      sr.onend = () => {
-        if (!listening.current || !alive.current) return;
-        try { sr.start(); } catch {}
-      };
+      sr.onerror = () => {};
       sr.start();
       recognition.current = sr;
     } catch {}
@@ -265,14 +184,12 @@ export default function PracticeRecorder({
 
   function stop() {
     if (ticker.current) { clearInterval(ticker.current); ticker.current = null; }
-    listening.current = false;
     try { if (recorder.current && recorder.current.state !== "inactive") recorder.current.stop(); } catch {}
     try { recognition.current?.stop(); } catch {}
   }
 
   async function save() {
     if (!blob) { setError("Record something first."); return; }
-    if (unplayable) { setError("This take cannot be played back, so it cannot be saved. Record it again."); return; }
     if (final && !window.confirm("Save this as your final attempt? Attempt 2 cannot be deleted.")) return;
     setSaving(true);
     setError(null);
@@ -388,7 +305,7 @@ export default function PracticeRecorder({
         <div className="bar"><i className={over ? "over" : ""} style={{ width: `${phase === "idle" ? 0 : pct}%` }} /></div>
 
         <div className="row" style={{ marginTop: 14, justifyContent: "center" }}>
-          <button className="btn rec" onClick={start} disabled={busy || saving || !!transcribing}>
+          <button className="btn rec" onClick={start} disabled={busy || saving}>
             ● {blob ? "Record again" : "Start recording"}
           </button>
           <button className="btn ghost" onClick={stop} disabled={phase !== "recording"}>Stop</button>
@@ -403,19 +320,13 @@ export default function PracticeRecorder({
         {playback && phase === "done" && (
           <div style={{ marginTop: 14 }}>
             {recordedVideo ? (
-              <video ref={(el) => { player.current = el; }} className="play" controls playsInline src={playback} onError={() => setUnplayable(true)} />
+              <video ref={(el) => { player.current = el; }} className="play" controls playsInline src={playback} />
             ) : (
-              <audio ref={(el) => { player.current = el; }} controls src={playback} onError={() => setUnplayable(true)} />
+              <audio ref={(el) => { player.current = el; }} controls src={playback} />
             )}
-            {unplayable ? (
-              <div className="err" style={{ marginTop: 8 }}>
-                This take cannot be played back, so it cannot be saved. Record it again; it does not use up an attempt.
-              </div>
-            ) : (
-              <p className="tiny muted center" style={{ marginTop: 6 }}>
-                Not saved yet. Play it back to check it, then save. Recording again replaces this take and does not use up an attempt.
-              </p>
-            )}
+            <p className="tiny muted center" style={{ marginTop: 6 }}>
+              Not saved yet. Recording again replaces this take and does not use up an attempt.
+            </p>
           </div>
         )}
 
@@ -434,27 +345,9 @@ export default function PracticeRecorder({
               id="transcript"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder={
-                transcribing
-                  ? "Your transcript will appear here in a moment."
-                  : autoTranscript
-                    ? "Fills in automatically. If it stays empty, type roughly what you said."
-                    : "Type roughly what you said. The AI feedback can only read what is here."
-              }
+              placeholder="Fills in automatically in Chrome. Otherwise type roughly what you said."
               style={{ minHeight: 110 }}
             />
-            {transcribing && (
-              <p className="tiny muted" style={{ marginTop: 6 }}>
-                <span className="dot" /> {transcribing}
-              </p>
-            )}
-            {!transcribing && !transcript.trim() && (
-              <p className="tiny muted" style={{ marginTop: 6 }}>
-                {autoTranscript
-                  ? "No words were picked up. Type roughly what you said before saving, or there will be nothing for the AI feedback to read."
-                  : "The transcript could not be written automatically on this device. Type roughly what you said before saving, or there will be nothing for the AI feedback to read."}
-              </p>
-            )}
 
             {preview ? (
               <>
@@ -470,9 +363,9 @@ export default function PracticeRecorder({
                 className={`btn block${final ? " gold" : ""}`}
                 style={{ marginTop: 14 }}
                 onClick={save}
-                disabled={saving || unplayable || !!transcribing}
+                disabled={saving}
               >
-                {saving ? "Uploading…" : transcribing ? "Waiting for the transcript…" : `Save attempt ${nextAttempt}`}
+                {saving ? "Uploading…" : `Save attempt ${nextAttempt}`}
               </button>
             )}
           </>
