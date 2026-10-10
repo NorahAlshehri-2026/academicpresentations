@@ -28,7 +28,7 @@ export default async function SharedWithMe() {
           {waiting > 0 && <span className="pill c5">{waiting} waiting for you</span>}
         </div>
         <p className="small muted">
-          Recordings your classmates have shared with you. Open one, listen, and score it against the rubric.
+          Recordings your classmates have shared with you. Open one, listen, and give feedback on the lesson objectives. The final presentation is scored on the full rubric.
         </p>
       </div>
 
