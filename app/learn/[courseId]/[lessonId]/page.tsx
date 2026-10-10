@@ -318,7 +318,7 @@ export default async function LessonPage({
       {shared.length > 0 && (
         <div className="card">
           <h3>Shared with you for this task</h3>
-          <p className="small muted">Listen, then score against the rubric.</p>
+          <p className="small muted">Listen, then give feedback.</p>
           <div style={{ marginTop: 6 }}>
             {shared.map((x: any) => {
               const s = x.submission;
