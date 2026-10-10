@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { browserClient } from "@/app/_lib/supabase-browser";
 import { RUBRIC } from "@/app/_lib/rubric";
+import { objectivesFor, encodeObjectives, decodeObjectives, RATINGS, type Rating } from "@/app/_lib/objectives";
 
 type Existing = {
   id: string;
@@ -45,26 +46,44 @@ export function ScorePicker({
   );
 }
 
-/** A classmate's scores and comments on a recording that was shared with them. */
+/**
+ * A classmate's feedback on a recording that was shared with them. In units
+ * 1–4 it is checked against the task's lesson objectives plus written
+ * comments; the full rubric is used only for the final presentation.
+ */
 export default function PeerFeedback({
   submissionId,
   authorId,
   existing,
+  activityKey,
 }: {
   submissionId: string;
   authorId: string;
   existing: Existing;
+  activityKey?: string | null;
 }) {
   const router = useRouter();
+  const objectives = objectivesFor(activityKey);
+  const prior = decodeObjectives(existing?.strengths);
   const [scores, setScores] = useState<Record<string, number>>({ ...(existing?.scores ?? {}) });
-  const [strengths, setStrengths] = useState(existing?.strengths ?? "");
+  const [checks, setChecks] = useState<Record<string, Rating>>(Object.fromEntries(prior.checks));
+  const [strengths, setStrengths] = useState(prior.text);
   const [improve, setImprove] = useState(existing?.improve ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   async function send() {
-    if (!Object.keys(scores).length) {
+    if (objectives) {
+      if (objectives.some((o) => !checks[o])) {
+        setError("Choose Yes, Partly or Not yet for every objective.");
+        return;
+      }
+      if (!strengths.trim() || !improve.trim()) {
+        setError("Write both comments: what worked, and one thing to change next time.");
+        return;
+      }
+    } else if (!Object.keys(scores).length) {
       setError("Give a score for at least one criterion.");
       return;
     }
@@ -73,16 +92,28 @@ export default function PeerFeedback({
     setSaved(false);
 
     const supabase = browserClient();
-    const body = { scores, strengths: strengths.trim() || null, improve: improve.trim() || null };
-    const { error: e } = existing
-      ? await supabase.from("feedback").update(body).eq("id", existing.id)
-      : await supabase.from("feedback").insert({ ...body, submission_id: submissionId, author_id: authorId, source: "peer" });
+    const body = objectives
+      ? {
+          scores: null,
+          strengths: encodeObjectives(objectives.map((o) => [o, checks[o]] as [string, Rating]), strengths),
+          improve: improve.trim() || null,
+        }
+      : { scores, strengths: strengths.trim() || null, improve: improve.trim() || null };
+    const write = (b: typeof body) =>
+      existing
+        ? supabase.from("feedback").update(b).eq("id", existing.id)
+        : supabase.from("feedback").insert({ ...b, submission_id: submissionId, author_id: authorId, source: "peer" });
+    let { error: e } = await write(body);
+    // if the database insists on a scores value, an empty set means "not scored"
+    if (e && objectives && /scores|null value|check constraint/i.test(e.message)) {
+      ({ error: e } = await write({ ...body, scores: {} as any }));
+    }
 
     setBusy(false);
     if (e) {
       setError(
         e.message.includes("row-level security")
-          ? "You cannot score this one. It has not been shared with you, or it is your own recording."
+          ? "You cannot give feedback on this one. It has not been shared with you, or it is your own recording."
           : e.message
       );
       return;
@@ -93,10 +124,36 @@ export default function PeerFeedback({
 
   return (
     <div className="card">
-      <h3>{existing ? "Your feedback" : "Score this recording"}</h3>
-      <p className="tiny muted">4 excellent · 3 good · 2 developing · 1 beginning. The descriptor changes as you choose.</p>
+      <h3>{existing ? "Your feedback" : objectives ? "Give feedback" : "Score this recording"}</h3>
 
-      <ScorePicker scores={scores} onPick={(id, n) => setScores({ ...scores, [id]: n })} />
+      {objectives ? (
+        <>
+          <p className="tiny muted">Check the speaker against this lesson&rsquo;s objectives, then write your comments.</p>
+          {objectives.map((o, i) => (
+            <div className="score-row" key={o} style={{ flexWrap: "wrap" }}>
+              <span className="nm" style={{ minWidth: 200 }}>{i + 1}. {o}</span>
+              <span className="seg">
+                {RATINGS.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    aria-pressed={checks[o] === r.id}
+                    onClick={() => setChecks({ ...checks, [o]: r.id })}
+                    style={{ width: "auto", padding: "0 10px", fontSize: 12.5 }}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </span>
+            </div>
+          ))}
+        </>
+      ) : (
+        <>
+          <p className="tiny muted">4 excellent · 3 good · 2 developing · 1 beginning. The descriptor changes as you choose.</p>
+          <ScorePicker scores={scores} onPick={(id, n) => setScores({ ...scores, [id]: n })} />
+        </>
+      )}
 
       <label className="fld" htmlFor={`s-${submissionId}`}>What worked</label>
       <textarea
