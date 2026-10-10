@@ -19,6 +19,27 @@ type Props = {
 
 const OVERRUN = 45; // seconds past the target before the clock stops itself
 
+/**
+ * iPhone and iPad (iPadOS reports itself as a Mac with a touch screen).
+ * There, speech recognition takes the microphone away from the recorder,
+ * which can leave the saved file empty or unplayable, so it is not run.
+ */
+function isAppleMobile() {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * Recording formats in order of preference. MP4 with AAC audio plays on every
+ * browser (Safari, Chrome, Edge, Firefox), so a recording made on one device
+ * can be heard on any other; WebM is the fallback where MP4 cannot be recorded.
+ */
+const AUDIO_TYPES = ["audio/mp4;codecs=mp4a.40.2", "audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+const VIDEO_TYPES = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
+
+/** Anything smaller than this is not a real recording. */
+const MIN_BYTES = 2000;
+
 /** Browser recordings often carry no length; this makes the player show it and allow seeking. */
 function fixDuration(el: HTMLMediaElement | null) {
   if (!el) return;
@@ -59,6 +80,8 @@ export default function PracticeRecorder({
   const [recordedVideo, setRecordedVideo] = useState(false);
 
   const [transcript, setTranscript] = useState("");
+  const [autoTranscript, setAutoTranscript] = useState(true);
+  const [unplayable, setUnplayable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -114,6 +137,7 @@ export default function PracticeRecorder({
     setTranscript("");
     setBlob(null);
     setPlayback(null);
+    setUnplayable(false);
     setElapsed(0);
     setRecordedVideo(useVideo);
 
@@ -125,9 +149,7 @@ export default function PracticeRecorder({
       if (!alive.current) { media.getTracks().forEach((t) => t.stop()); return; }
     }
 
-    const types = useVideo
-      ? ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"]
-      : ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+    const types = useVideo ? VIDEO_TYPES : AUDIO_TYPES;
     const mime = types.find((t) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t));
     const opts: MediaRecorderOptions = { audioBitsPerSecond: 48000 };
     if (useVideo) opts.videoBitsPerSecond = 600000;
@@ -140,13 +162,20 @@ export default function PracticeRecorder({
     mr.onstop = () => {
       const type = mr.mimeType || chunks.current[0]?.type || (useVideo ? "video/webm" : "audio/webm");
       const b = new Blob(chunks.current, { type });
+      if (b.size < MIN_BYTES) {
+        stream.current?.getTracks().forEach((t) => t.stop());
+        setPhase("idle");
+        setError("The recording came out empty, so it was not kept. Close other apps that use the microphone, reload the page and record again.");
+        return;
+      }
       setBlob(b);
       setPlayback(URL.createObjectURL(b));
       stream.current?.getTracks().forEach((t) => t.stop());
       setPhase("done");
     };
 
-    mr.start(1000);
+    // No timeslice: Safari can write a broken file when it records in slices.
+    mr.start();
     started.current = Date.now();
     setPhase("recording");
 
@@ -161,7 +190,8 @@ export default function PracticeRecorder({
 
   function startSpeech() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR || isAppleMobile()) { setAutoTranscript(false); return; }
+    setAutoTranscript(true);
     try {
       const sr = new SR();
       sr.lang = "en-GB";
@@ -190,6 +220,7 @@ export default function PracticeRecorder({
 
   async function save() {
     if (!blob) { setError("Record something first."); return; }
+    if (unplayable) { setError("This take cannot be played back, so it cannot be saved. Record it again."); return; }
     if (final && !window.confirm("Save this as your final attempt? Attempt 2 cannot be deleted.")) return;
     setSaving(true);
     setError(null);
@@ -320,13 +351,19 @@ export default function PracticeRecorder({
         {playback && phase === "done" && (
           <div style={{ marginTop: 14 }}>
             {recordedVideo ? (
-              <video ref={(el) => { player.current = el; }} className="play" controls playsInline src={playback} />
+              <video ref={(el) => { player.current = el; }} className="play" controls playsInline src={playback} onError={() => setUnplayable(true)} />
             ) : (
-              <audio ref={(el) => { player.current = el; }} controls src={playback} />
+              <audio ref={(el) => { player.current = el; }} controls src={playback} onError={() => setUnplayable(true)} />
             )}
-            <p className="tiny muted center" style={{ marginTop: 6 }}>
-              Not saved yet. Recording again replaces this take and does not use up an attempt.
-            </p>
+            {unplayable ? (
+              <div className="err" style={{ marginTop: 8 }}>
+                This take cannot be played back, so it cannot be saved. Record it again; it does not use up an attempt.
+              </div>
+            ) : (
+              <p className="tiny muted center" style={{ marginTop: 6 }}>
+                Not saved yet. Play it back to check it, then save. Recording again replaces this take and does not use up an attempt.
+              </p>
+            )}
           </div>
         )}
 
@@ -345,9 +382,15 @@ export default function PracticeRecorder({
               id="transcript"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Fills in automatically in Chrome. Otherwise type roughly what you said."
+              placeholder={autoTranscript ? "Fills in automatically in Chrome. Otherwise type roughly what you said." : "Type roughly what you said. The AI feedback can only read what is here."}
               style={{ minHeight: 110 }}
             />
+            {!autoTranscript && !transcript.trim() && (
+              <p className="tiny muted" style={{ marginTop: 6 }}>
+                On iPad and iPhone the transcript does not fill in by itself. Type what you said before saving, or
+                there will be nothing for the AI feedback to read.
+              </p>
+            )}
 
             {preview ? (
               <>
@@ -363,7 +406,7 @@ export default function PracticeRecorder({
                 className={`btn block${final ? " gold" : ""}`}
                 style={{ marginTop: 14 }}
                 onClick={save}
-                disabled={saving}
+                disabled={saving || unplayable}
               >
                 {saving ? "Uploading…" : `Save attempt ${nextAttempt}`}
               </button>

@@ -8,6 +8,7 @@ import MediaPlayer from "@/app/_components/MediaPlayer";
 import PeerFeedback from "@/app/_components/PeerFeedback";
 import MarkForm from "@/app/_components/MarkForm";
 import FeedbackList, { type FeedbackRow } from "@/app/_components/FeedbackList";
+import DeleteAttempt from "@/app/_components/DeleteAttempt";
 
 /**
  * One recording, opened by someone who is not its owner: a classmate it was
@@ -104,6 +105,21 @@ export default async function ReviewPage({ params }: { params: { submissionId: s
           <summary className="small" style={{ cursor: "pointer", fontWeight: 600, color: "var(--ink)" }}>The task</summary>
           <div style={{ marginTop: 8 }} className="lesson-body"><Prose text={sub.lesson?.body ?? null} /></div>
         </details>
+
+        {profile.role === "admin" && !mark && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--rule)" }}>
+            <p className="tiny muted" style={{ margin: "0 0 8px" }}>
+              Administrator: if this recording is broken or empty, clear the attempt so the student can record it again.
+            </p>
+            <DeleteAttempt
+              submissionId={sub.id}
+              filePath={sub.file_path}
+              label={`Clear attempt ${sub.attempt_no}`}
+              confirmText={`Clear ${sub.owner?.full_name ?? "this student"}'s attempt ${sub.attempt_no}? The recording and any feedback on it are deleted, and the student can record this attempt again.`}
+              after={`/teach/sections/${sub.section_id}/students/${sub.student_id}`}
+            />
+          </div>
+        )}
       </div>
 
       {canMark ? (
