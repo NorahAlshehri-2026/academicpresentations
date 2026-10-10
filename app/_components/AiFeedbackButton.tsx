@@ -12,7 +12,7 @@ const ASSISTANTS: [string, string][] = [
 /**
  * AI feedback, free of charge: the site writes the request, the student pastes
  * it into any free AI assistant, then pastes the reply back here, where it is
- * read as rubric scores and saved with the recording.
+ * read and saved with the recording.
  *
  * If the academy has switched on paid automatic feedback (AI_FEEDBACK_AUTO=on
  * as well as an API key in the hosting settings), a one-tap button appears too.
@@ -86,8 +86,8 @@ export default function AiFeedbackButton({
       <h3 style={{ fontSize: 14 }}>AI feedback</h3>
       <p className="small muted" style={{ marginTop: 4 }}>
         Free: the site writes the request for you, you paste it into any free AI assistant, then paste its answer
-        back here. It scores the same rubric from your transcript and timing; eye contact and posture stay your
-        classmate&rsquo;s job.
+        back here. It checks the same lesson objectives (or, for the final presentation, the rubric) from your
+        transcript and timing; eye contact and posture stay your classmate&rsquo;s job.
       </p>
 
       {!hasTranscript ? (
@@ -96,7 +96,7 @@ export default function AiFeedbackButton({
         </div>
       ) : !hasPeer ? (
         <div className="note" style={{ marginTop: 10 }}>
-          Classmate feedback comes first. Share this recording, and once a classmate has scored it the AI builds on
+          Classmate feedback comes first. Share this recording, and once a classmate has given feedback the AI builds on
           what they said.
         </div>
       ) : null}
@@ -133,7 +133,7 @@ export default function AiFeedbackButton({
             id={`ai-${submissionId}`}
             value={reply}
             onChange={(e) => setReply(e.target.value)}
-            placeholder='It starts with {"scores": …'
+            placeholder='It starts with { …'
           />
           <button className="btn gold block" style={{ marginTop: 10 }} onClick={() => send({ reply })} disabled={busy || !reply.trim()}>
             {busy ? "Saving…" : "Save the AI feedback"}
