@@ -28,7 +28,7 @@ export default function GuidePage() {
             turns gold in the last 15 seconds, red when you go over, and stops on its own 45 seconds after the target.
           </li>
           <li>
-            Check the transcript box. It fills in by itself in Chrome; on iPad, iPhone and other browsers, type roughly what you said,
+            Check the transcript box. It fills in by itself as you speak (on iPad and iPhone, Dictation must be on); if it stays empty, type roughly what you said,
             because the AI reads only this.
           </li>
           <li>

@@ -20,16 +20,6 @@ type Props = {
 const OVERRUN = 45; // seconds past the target before the clock stops itself
 
 /**
- * iPhone and iPad (iPadOS reports itself as a Mac with a touch screen).
- * There, speech recognition takes the microphone away from the recorder,
- * which can leave the saved file empty or unplayable, so it is not run.
- */
-function isAppleMobile() {
-  if (typeof navigator === "undefined") return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
-
-/**
  * Recording formats in order of preference. MP4 with AAC audio plays on every
  * browser (Safari, Chrome, Edge, Firefox), so a recording made on one device
  * can be heard on any other; WebM is the fallback where MP4 cannot be recorded.
@@ -92,6 +82,8 @@ export default function PracticeRecorder({
   const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
   const recognition = useRef<any>(null);
   const finalText = useRef("");
+  /** true while recording, so speech recognition restarts itself if the browser stops it on a pause */
+  const listening = useRef(false);
   const alive = useRef(true);
   const player = useRef<HTMLMediaElement | null>(null);
 
@@ -109,6 +101,7 @@ export default function PracticeRecorder({
       alive.current = false;
       try { if (recorder.current && recorder.current.state !== "inactive") { recorder.current.onstop = null; recorder.current.stop(); } } catch {}
       try { stream.current?.getTracks().forEach((t) => t.stop()); } catch {}
+      listening.current = false;
       try { recognition.current?.stop(); } catch {}
       if (ticker.current) clearInterval(ticker.current);
     };
@@ -190,8 +183,9 @@ export default function PracticeRecorder({
 
   function startSpeech() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR || isAppleMobile()) { setAutoTranscript(false); return; }
+    if (!SR) { setAutoTranscript(false); return; }
     setAutoTranscript(true);
+    listening.current = true;
     try {
       const sr = new SR();
       sr.lang = "en-GB";
@@ -206,7 +200,18 @@ export default function PracticeRecorder({
         }
         setTranscript((finalText.current + interim).trim());
       };
-      sr.onerror = () => {};
+      sr.onerror = (e: any) => {
+        // dictation switched off or refused: the student types the transcript instead
+        if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+          listening.current = false;
+          setAutoTranscript(false);
+        }
+      };
+      // Safari and Chrome stop listening after a pause; carry on until the recording stops
+      sr.onend = () => {
+        if (!listening.current || !alive.current) return;
+        try { sr.start(); } catch {}
+      };
       sr.start();
       recognition.current = sr;
     } catch {}
@@ -214,6 +219,7 @@ export default function PracticeRecorder({
 
   function stop() {
     if (ticker.current) { clearInterval(ticker.current); ticker.current = null; }
+    listening.current = false;
     try { if (recorder.current && recorder.current.state !== "inactive") recorder.current.stop(); } catch {}
     try { recognition.current?.stop(); } catch {}
   }
@@ -382,13 +388,14 @@ export default function PracticeRecorder({
               id="transcript"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder={autoTranscript ? "Fills in automatically in Chrome. Otherwise type roughly what you said." : "Type roughly what you said. The AI feedback can only read what is here."}
+              placeholder={autoTranscript ? "Fills in automatically as you speak. If it stays empty, type roughly what you said." : "Type roughly what you said. The AI feedback can only read what is here."}
               style={{ minHeight: 110 }}
             />
-            {!autoTranscript && !transcript.trim() && (
+            {!transcript.trim() && (
               <p className="tiny muted" style={{ marginTop: 6 }}>
-                On iPad and iPhone the transcript does not fill in by itself. Type what you said before saving, or
-                there will be nothing for the AI feedback to read.
+                {autoTranscript
+                  ? "No words were picked up. Type roughly what you said before saving, or there will be nothing for the AI feedback to read."
+                  : "This browser cannot write the transcript by itself (on iPad and iPhone, turn on Dictation in Settings › General › Keyboard). Type what you said before saving, or there will be nothing for the AI feedback to read."}
               </p>
             )}
 
