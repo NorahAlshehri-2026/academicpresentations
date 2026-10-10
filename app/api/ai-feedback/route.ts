@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentProfile, serverClient, adminClient } from "@/app/_lib/supabase";
 import { RUBRIC } from "@/app/_lib/rubric";
+import { objectivesFor, encodeObjectives, type Rating } from "@/app/_lib/objectives";
 
 /**
  * AI feedback on one recording.
@@ -27,7 +28,7 @@ const autoFeedbackOn = () =>
 
 type Loaded =
   | { error: string; status: number }
-  | { prompt: string; submissionId: string };
+  | { prompt: string; submissionId: string; objectives: string[] | null };
 
 async function load(submissionId: string | null): Promise<Loaded> {
   const profile = await currentProfile();
@@ -37,7 +38,7 @@ async function load(submissionId: string | null): Promise<Loaded> {
   const supabase = serverClient();
   const { data: sub } = await supabase
     .from("submissions")
-    .select("id, student_id, transcript, duration_seconds, lessons(title, body, target_seconds)")
+    .select("id, student_id, transcript, duration_seconds, lessons(title, body, target_seconds, activity_key)")
     .eq("id", submissionId)
     .single();
 
@@ -54,7 +55,7 @@ async function load(submissionId: string | null): Promise<Loaded> {
     .in("source", ["peer", "teacher"]);
 
   if (!peer?.length) {
-    return { error: "Classmate feedback comes first. Share this recording and ask a classmate to score it.", status: 400 };
+    return { error: "Classmate feedback comes first. Share this recording and ask a classmate to give feedback.", status: 400 };
   }
 
   const { data: existing } = await supabase
@@ -66,6 +67,7 @@ async function load(submissionId: string | null): Promise<Loaded> {
   if (existing) return { error: "This attempt already has AI feedback.", status: 409 };
 
   const lesson = (sub as any).lessons;
+  const objectives = objectivesFor(lesson?.activity_key);
   const target = lesson?.target_seconds ?? 120;
   const actual = sub.duration_seconds ?? 0;
   const diff = actual - target;
@@ -84,25 +86,36 @@ TRANSCRIPT (automatic speech-to-text, so expect transcription errors; judge the 
 FEEDBACK ALREADY GIVEN BY A CLASSMATE OR TEACHER:
 ${JSON.stringify(peer)}
 
-RUBRIC — score each criterion 1 to 4:
-${RUBRIC.map((c) => `${c.n}. ${c.name} [id: ${c.id}]\n  4 = ${c.l4}\n  3 = ${c.l3}\n  2 = ${c.l2}\n  1 = ${c.l1}`).join("\n\n")}
+${
+    objectives
+      ? `LESSON OBJECTIVES — judge each one as "yes" (achieved), "partly" or "no" (not yet):
+${objectives.map((o, i) => `${i + 1}. ${o}`).join("\n")}`
+      : `RUBRIC — score each criterion 1 to 4:
+${RUBRIC.map((c) => `${c.n}. ${c.name} [id: ${c.id}]\n  4 = ${c.l4}\n  3 = ${c.l3}\n  2 = ${c.l2}\n  1 = ${c.l1}`).join("\n\n")}`
+  }
 
 Rules:
-- Judge only what a transcript and timing can show: wording, structure, signposting, source acknowledgement, timing, pace, fillers, repetition. Never claim to judge eye contact, posture or gestures; where a criterion depends on those, score what is audible and say in the action what a classmate should watch for.
+- Judge only what a transcript and timing can show: wording, structure, signposting, source acknowledgement, timing, pace, fillers, repetition. Never claim to judge eye contact, posture or gestures; where ${objectives ? "an objective" : "a criterion"} depends on those, judge what is audible and say in the action what a classmate should watch for.
 - Quote or paraphrase a short specific moment from the transcript as evidence.
 - Build on the earlier feedback where it agrees; say plainly where your reading differs.
-- Be encouraging but honest. A 4 must be earned.
+- Be encouraging but honest. ${objectives ? "A \"yes\" must be earned." : "A 4 must be earned."}
 
 Reply with ONLY this JSON and nothing else:
-{"scores":{"intro":1-4,"organization":1-4,"delivery":1-4,"language":1-4,"conclusion":1-4},
+${
+    objectives
+      ? `{"objectives":[${objectives.map(() => '"yes"|"partly"|"no"').join(",")}],
  "strengths":"what worked, quoting the transcript, 2-3 sentences",
- "improve":"the single most useful change, one sentence addressed to you"}`;
+ "improve":"the single most useful change, one sentence addressed to you"}`
+      : `{"scores":{"intro":1-4,"organization":1-4,"delivery":1-4,"language":1-4,"conclusion":1-4},
+ "strengths":"what worked, quoting the transcript, 2-3 sentences",
+ "improve":"the single most useful change, one sentence addressed to you"}`
+  }`;
 
-  return { prompt, submissionId };
+  return { prompt, submissionId, objectives };
 }
 
 /** Pulls the scores out of an assistant's reply, however it was wrapped. */
-function parseReply(text: string) {
+function parseReply(text: string, objectives: string[] | null = null) {
   const clean = String(text).replace(/```json/gi, "```").split("```").join(" ");
   const start = clean.indexOf("{");
   const end = clean.lastIndexOf("}");
@@ -113,6 +126,23 @@ function parseReply(text: string) {
   } catch {
     return null;
   }
+  if (objectives) {
+    const raw: unknown[] = Array.isArray(data?.objectives) ? data.objectives : [];
+    const norm = (v: unknown): Rating | null => {
+      const t = String(v ?? "").toLowerCase().trim();
+      return t.startsWith("y") || t === "achieved" ? "yes" : t.startsWith("p") ? "partly" : t.startsWith("n") ? "no" : null;
+    };
+    const ratings = objectives.map((_, i) => norm(raw[i]));
+    if (ratings.some((r) => !r)) return null;
+    return {
+      scores: null as Record<string, number> | null,
+      strengths: encodeObjectives(
+        objectives.map((o, i) => [o, ratings[i] as Rating]),
+        String(data.strengths ?? "").slice(0, 2000)
+      ),
+      improve: String(data.improve ?? "").slice(0, 2000) || null,
+    };
+  }
   const scores: Record<string, number> = {};
   for (const c of RUBRIC) {
     const v = Math.round(Number(data?.scores?.[c.id]));
@@ -120,19 +150,19 @@ function parseReply(text: string) {
   }
   if (!Object.keys(scores).length) return null;
   return {
-    scores,
+    scores: scores as Record<string, number> | null,
     strengths: String(data.strengths ?? "").slice(0, 2000) || null,
     improve: String(data.improve ?? "").slice(0, 2000) || null,
   };
 }
 
 async function save(submissionId: string, parsed: NonNullable<ReturnType<typeof parseReply>>) {
-  const { error } = await adminClient().from("feedback").insert({
-    submission_id: submissionId,
-    author_id: null,
-    source: "ai",
-    ...parsed,
-  });
+  const row = { submission_id: submissionId, author_id: null, source: "ai", ...parsed };
+  let { error } = await adminClient().from("feedback").insert(row);
+  // if the database insists on a scores value, an empty set means "not scored"
+  if (error && parsed.scores === null && /scores|null value|check constraint/i.test(error.message)) {
+    ({ error } = await adminClient().from("feedback").insert({ ...row, scores: {} }));
+  }
   if (error) {
     console.error("ai-feedback insert", error);
     return NextResponse.json({ error: "The feedback could not be saved." }, { status: 500 });
@@ -155,10 +185,10 @@ export async function POST(request: Request) {
 
   // the free way: the student pasted an assistant's reply
   if (typeof body?.reply === "string") {
-    const parsed = parseReply(body.reply);
+    const parsed = parseReply(body.reply, r.objectives);
     if (!parsed) {
       return NextResponse.json(
-        { error: "That reply could not be read as scores. Ask the assistant to reply with only the JSON, then paste it again." },
+        { error: "That reply could not be read as feedback. Ask the assistant to reply with only the JSON, then paste it again." },
         { status: 400 }
       );
     }
@@ -182,7 +212,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `The feedback service returned ${res.status}.` }, { status: 502 });
     }
     const out = await res.json();
-    const parsed = parseReply(out.content?.[0]?.text ?? "");
+    const parsed = parseReply(out.content?.[0]?.text ?? "", r.objectives);
     if (!parsed) return NextResponse.json({ error: "The reply could not be read as scores. Try again." }, { status: 502 });
     return save(r.submissionId, parsed);
   } catch (e) {
