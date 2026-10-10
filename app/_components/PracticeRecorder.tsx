@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { browserClient } from "@/app/_lib/supabase-browser";
 import { metricsOf, mmss, paceLabel } from "@/app/_lib/format";
+import { transcribeOnDevice } from "@/app/_lib/transcribe";
 
 type Props = {
   lessonId: string;
@@ -18,6 +19,22 @@ type Props = {
 };
 
 const OVERRUN = 45; // seconds past the target before the clock stops itself
+
+/**
+ * Live speech recognition only where it can share the microphone with the
+ * recorder: Chrome and Edge on computers and Android. On iPad, iPhone and in
+ * Safari it takes the microphone over and the recording comes out silent, so
+ * there the recording is transcribed on the device after it stops.
+ */
+function canListenLive() {
+  if (typeof window === "undefined") return false;
+  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  if (!SR) return false;
+  const ua = navigator.userAgent;
+  const appleMobile = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(ua);
+  return !appleMobile && !safari;
+}
 
 /**
  * Recording formats in order of preference. MP4 with AAC audio plays on every
@@ -71,6 +88,8 @@ export default function PracticeRecorder({
 
   const [transcript, setTranscript] = useState("");
   const [autoTranscript, setAutoTranscript] = useState(true);
+  /** after recording on iPad/Safari: "" when idle, otherwise what the transcriber is doing */
+  const [transcribing, setTranscribing] = useState("");
   const [unplayable, setUnplayable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -84,6 +103,8 @@ export default function PracticeRecorder({
   const finalText = useRef("");
   /** true while recording, so speech recognition restarts itself if the browser stops it on a pause */
   const listening = useRef(false);
+  /** whether this take is being transcribed live (Chrome) or afterwards on the device */
+  const liveMode = useRef(true);
   const alive = useRef(true);
   const player = useRef<HTMLMediaElement | null>(null);
 
@@ -165,6 +186,7 @@ export default function PracticeRecorder({
       setPlayback(URL.createObjectURL(b));
       stream.current?.getTracks().forEach((t) => t.stop());
       setPhase("done");
+      if (!liveMode.current) transcribeAfter(b);
     };
 
     // No timeslice: Safari can write a broken file when it records in slices.
@@ -181,9 +203,33 @@ export default function PracticeRecorder({
     startSpeech();
   }
 
+  async function transcribeAfter(b: Blob) {
+    setTranscribing("Writing your transcript…");
+    try {
+      const text = await transcribeOnDevice(b, (st) => {
+        if (!alive.current) return;
+        setTranscribing(
+          st.stage === "download"
+            ? `Getting the transcriber ready (first time only) · ${st.percent}%`
+            : "Writing your transcript…"
+        );
+      });
+      if (!alive.current) return;
+      // keep anything the student typed while waiting
+      setTranscript((cur) => (cur.trim() ? cur : text));
+      if (!text) setAutoTranscript(false);
+    } catch {
+      if (alive.current) setAutoTranscript(false);
+    } finally {
+      if (alive.current) setTranscribing("");
+    }
+  }
+
   function startSpeech() {
+    liveMode.current = canListenLive();
+    setAutoTranscript(true);
+    if (!liveMode.current) return; // transcribed after the recording stops
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { setAutoTranscript(false); return; }
     setAutoTranscript(true);
     listening.current = true;
     try {
@@ -342,7 +388,7 @@ export default function PracticeRecorder({
         <div className="bar"><i className={over ? "over" : ""} style={{ width: `${phase === "idle" ? 0 : pct}%` }} /></div>
 
         <div className="row" style={{ marginTop: 14, justifyContent: "center" }}>
-          <button className="btn rec" onClick={start} disabled={busy || saving}>
+          <button className="btn rec" onClick={start} disabled={busy || saving || !!transcribing}>
             ● {blob ? "Record again" : "Start recording"}
           </button>
           <button className="btn ghost" onClick={stop} disabled={phase !== "recording"}>Stop</button>
@@ -388,14 +434,25 @@ export default function PracticeRecorder({
               id="transcript"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder={autoTranscript ? "Fills in automatically as you speak. If it stays empty, type roughly what you said." : "Type roughly what you said. The AI feedback can only read what is here."}
+              placeholder={
+                transcribing
+                  ? "Your transcript will appear here in a moment."
+                  : autoTranscript
+                    ? "Fills in automatically. If it stays empty, type roughly what you said."
+                    : "Type roughly what you said. The AI feedback can only read what is here."
+              }
               style={{ minHeight: 110 }}
             />
-            {!transcript.trim() && (
+            {transcribing && (
+              <p className="tiny muted" style={{ marginTop: 6 }}>
+                <span className="dot" /> {transcribing}
+              </p>
+            )}
+            {!transcribing && !transcript.trim() && (
               <p className="tiny muted" style={{ marginTop: 6 }}>
                 {autoTranscript
                   ? "No words were picked up. Type roughly what you said before saving, or there will be nothing for the AI feedback to read."
-                  : "This browser cannot write the transcript by itself (on iPad and iPhone, turn on Dictation in Settings › General › Keyboard). Type what you said before saving, or there will be nothing for the AI feedback to read."}
+                  : "The transcript could not be written automatically on this device. Type roughly what you said before saving, or there will be nothing for the AI feedback to read."}
               </p>
             )}
 
@@ -413,9 +470,9 @@ export default function PracticeRecorder({
                 className={`btn block${final ? " gold" : ""}`}
                 style={{ marginTop: 14 }}
                 onClick={save}
-                disabled={saving || unplayable}
+                disabled={saving || unplayable || !!transcribing}
               >
-                {saving ? "Uploading…" : `Save attempt ${nextAttempt}`}
+                {saving ? "Uploading…" : transcribing ? "Waiting for the transcript…" : `Save attempt ${nextAttempt}`}
               </button>
             )}
           </>
