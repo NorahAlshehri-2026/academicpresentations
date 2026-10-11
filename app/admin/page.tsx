@@ -2,10 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentProfile, serverClient, homeFor } from "@/app/_lib/supabase";
 import StaffInvites from "@/app/_components/StaffInvites";
-import { fmtDate } from "@/app/_lib/format";
+import PeopleTable from "@/app/_components/PeopleTable";
 
 const ROLE_ORDER: Record<string, number> = { admin: 0, teacher: 1, student: 2 };
-const ROLE_LABEL: Record<string, string> = { admin: "Administrator", teacher: "Teacher", student: "Student" };
 
 export default async function AdminDashboard() {
   const profile = await currentProfile();
@@ -89,27 +88,7 @@ export default async function AdminDashboard() {
         )}
       </div>
 
-      <div className="card">
-        <h3>People</h3>
-        <div className="tablewrap" style={{ marginTop: 12 }}>
-          <table>
-            <thead>
-              <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {list.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.full_name}{p.id === (owner as any)?.profile_id ? " · owner" : ""}</td>
-                  <td>{p.email}</td>
-                  <td>{ROLE_LABEL[p.role]}</td>
-                  <td>{fmtDate(p.created_at)}</td>
-                  <td>{p.active ? "active" : "disabled"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <PeopleTable list={list} ownerId={(owner as any)?.profile_id ?? null} canDelete={!!isOwner} />
     </>
   );
 }
