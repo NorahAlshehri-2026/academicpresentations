@@ -34,7 +34,7 @@ export default async function UnitsPage() {
             const reads = rows.filter((l) => l.kind !== "practice");
             const acts = rows.filter((l) => l.kind === "practice");
             return (
-              <div className="card ucard" key={u} style={{ borderLeftColor: meta.colour, margin: 0 }}>
+              <div className="card ucard" key={u} style={{ ["--accent" as any]: meta.colour, margin: 0 }}>
                 <div className="n">Unit {u}</div>
                 <h3 style={{ margin: "4px 0 6px" }}>{meta.title}</h3>
                 {meta.blurb && <p className="small muted">{meta.blurb}</p>}
