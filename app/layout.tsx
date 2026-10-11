@@ -57,10 +57,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </main>
         <footer className="sitefoot">
           Foundations of Academic Presentations
-          <br />
-          <span className="tiny">
-            Recordings are private: only you, your teacher and the classmates you share with can play them.
-          </span>
         </footer>
       </body>
     </html>
