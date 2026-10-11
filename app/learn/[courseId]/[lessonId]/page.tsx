@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { currentProfile, serverClient } from "@/app/_lib/supabase";
-import { RB } from "@/app/_lib/rubric";
-import { FOCUS, CRIT_CLASS, MAX_ATTEMPTS, unitMeta } from "@/app/_lib/activities";
+import { CRIT_CLASS, MAX_ATTEMPTS, unitMeta } from "@/app/_lib/activities";
+import { objectivesFor } from "@/app/_lib/objectives";
+import { RUBRIC } from "@/app/_lib/rubric";
 import { mmss, fmtDate, metricsOf, paceLabel } from "@/app/_lib/format";
 import Prose from "@/app/_components/Prose";
 import PracticeRecorder from "@/app/_components/PracticeRecorder";
@@ -48,7 +49,8 @@ export default async function LessonPage({
 
   const isPractice = lesson.kind === "practice";
   const target = lesson.target_seconds ?? 120;
-  const focus = FOCUS[lesson.activity_key ?? ""] ?? [];
+  // units 1–4: a peer checklist built from the lesson objectives; the final presentation keeps the rubric
+  const checklist = isPractice ? objectivesFor(lesson.activity_key) : null;
   const meta = unitMeta(lesson.unit);
 
   const header = (
@@ -68,15 +70,35 @@ export default async function LessonPage({
       <div style={{ marginTop: 12 }} className="lesson-body">
         <Prose text={lesson.body} />
       </div>
-      {focus.length > 0 && (
-        <div className="row" style={{ marginTop: 12 }}>
-          {focus.map((f) => (
-            <span key={f} className={`pill ${CRIT_CLASS[f]}`}>
-              {RB[f].n}. {RB[f].name.split(" and ")[0]}
-            </span>
-          ))}
-        </div>
-      )}
+      {isPractice &&
+        (checklist ? (
+          <div className="checklist" style={{ ["--unit" as any]: meta.colour }}>
+            <h4>Peer checklist</h4>
+            <p className="tiny muted">
+              Your classmate listens and checks each point: Yes, Partly or Not yet. Then they write what worked and
+              what to do next time.
+            </p>
+            <ul>
+              {checklist.map((o) => (
+                <li key={o}>{o}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="checklist" style={{ ["--unit" as any]: meta.colour }}>
+            <h4>Marked on the full rubric · 20 marks</h4>
+            <p className="tiny muted">
+              The final presentation is scored on all five criteria, 4 marks each. <Link href="/rubric">Read the descriptors</Link>
+            </p>
+            <div className="row" style={{ marginTop: 10 }}>
+              {RUBRIC.map((c) => (
+                <span key={c.id} className={`pill ${CRIT_CLASS[c.id]}`}>
+                  {c.n}. {c.name.split(" and ")[0]}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
     </div>
   );
 
@@ -211,7 +233,7 @@ export default async function LessonPage({
             nextAttempt={1}
             preview
           />
-          <SampleAttempt target={target} />
+          <SampleAttempt target={target} activityKey={lesson.activity_key} />
         </>
       ) : !sectionId ? (
         <div className="card">
@@ -301,7 +323,7 @@ export default async function LessonPage({
                 feedback={fb}
                 mark={mark}
                 viewerId={profile.id}
-                emptyText="None yet. Share this recording with a classmate and their scores appear here."
+                emptyText="None yet. Share this recording with a classmate and their feedback appears here."
               />
               <AiFeedbackButton
                 submissionId={s.id}
