@@ -3,6 +3,7 @@ import { currentProfile, serverClient } from "@/app/_lib/supabase";
 import { loadCourse } from "@/app/_lib/course";
 import { firstName, mmss } from "@/app/_lib/format";
 import Icon from "@/app/_components/Icon";
+import { PreviewBanner } from "@/app/_components/StudentPreview";
 
 type Tile = { href: string; icon: string; colour: string; title: string; text: string };
 
@@ -32,7 +33,14 @@ function NextStep({ title = "Your next step", text, href, label, icon }: { title
   );
 }
 
-export default async function Home() {
+const STUDENT_TILES: Tile[] = [
+  { href: "/units", icon: "book", colour: "var(--u1)", title: "Learn", text: "Review presentation skills" },
+  { href: "/activities", icon: "video", colour: "var(--u2)", title: "Practise", text: "Record and upload" },
+  { href: "/recordings", icon: "message", colour: "var(--u3)", title: "Feedback", text: "Review your performance" },
+  { href: "/progress", icon: "chart", colour: "var(--u4)", title: "Progress", text: "Track your improvement" },
+];
+
+export default async function Home({ searchParams }: { searchParams?: { preview?: string } }) {
   let profile = null;
   try {
     profile = await currentProfile();
@@ -69,6 +77,36 @@ export default async function Home() {
   }
 
   // ---------------------------------------------------------------- staff
+  if (profile.role !== "student" && searchParams?.preview === "student") {
+    // the student Home, with sample details, for teachers and administrators
+    const { course, lessons } = await loadCourse();
+    const first = lessons.find((l) => l.kind === "practice") ?? null;
+    return (
+      <>
+        <PreviewBanner />
+        <div className="pagehead">
+          <h1>Welcome back, Sara</h1>
+          <p className="lead">Section 101 · Semester 1, 2026-27 <span className="tiny">(sample details)</span></p>
+        </div>
+        <Tiles items={STUDENT_TILES} />
+        {course && first ? (
+          <NextStep
+            text={
+              <>
+                <b>{first.title}</b>: prepare for {mmss(first.prep_seconds ?? 0)}, then speak for {mmss(first.target_seconds ?? 0)}.
+              </>
+            }
+            href={`/learn/${course.id}/${first.id}`}
+            label="Record your first activity"
+            icon="mic"
+          />
+        ) : (
+          <NextStep text="Record your academic presentation and submit it for feedback." href="/activities" label="Upload Presentation" icon="mic" />
+        )}
+      </>
+    );
+  }
+
   if (profile.role !== "student") {
     return (
       <>
@@ -92,6 +130,9 @@ export default async function Home() {
           label="Open my classes"
           icon="arrow"
         />
+        <p className="small center" style={{ marginTop: 14 }}>
+          <Link href="/?preview=student">See the student Home page (student preview)</Link>
+        </p>
       </>
     );
   }
@@ -131,14 +172,7 @@ export default async function Home() {
         </p>
       </div>
 
-      <Tiles
-        items={[
-          { href: "/units", icon: "book", colour: "var(--u1)", title: "Learn", text: "Review presentation skills" },
-          { href: "/activities", icon: "video", colour: "var(--u2)", title: "Practise", text: "Record and upload" },
-          { href: "/recordings", icon: "message", colour: "var(--u3)", title: "Feedback", text: "Review your performance" },
-          { href: "/progress", icon: "chart", colour: "var(--u4)", title: "Progress", text: "Track your improvement" },
-        ]}
-      />
+      <Tiles items={STUDENT_TILES} />
 
       {waiting > 0 && (
         <Link className="nextstep notice" href="/shared">
