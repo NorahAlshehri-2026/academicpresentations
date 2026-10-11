@@ -7,6 +7,7 @@ import { fmtDate } from "@/app/_lib/format";
 import { Radar, RADAR_LABELS } from "@/app/_components/Charts";
 import ClassLink from "@/app/_components/ClassLink";
 import RemoveStudent from "@/app/_components/RemoveStudent";
+import DeleteSection from "@/app/_components/DeleteSection";
 
 /** The gradebook for one class: who has joined, what they have done, their marks. */
 export default async function Gradebook({ params }: { params: { id: string } }) {
@@ -25,6 +26,7 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
   if (!section) notFound();
   const sec = section as any;
   const own = sec.teacher_id === profile.id;
+  const isAdmin = profile.role === "admin";
 
   const [{ data: enrolled }, { data: tasks }, { data: subs }, { data: marks }] = await Promise.all([
     supabase
@@ -184,6 +186,18 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
             )}
           </div>
         </>
+      )}
+
+      {(own || isAdmin) && (
+        <DeleteSection
+          sectionId={sec.id}
+          sectionNumber={String(sec.number)}
+          students={students.length}
+          attempts={allSubs.length}
+          marks={allMarks.length}
+          canDelete={isAdmin || allMarks.length === 0}
+          after={own ? "/teach" : "/admin"}
+        />
       )}
     </>
   );
