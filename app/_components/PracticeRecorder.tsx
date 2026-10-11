@@ -320,7 +320,7 @@ export default function PracticeRecorder({
           </button>
         </div>
         <p className="tiny muted" style={{ marginTop: 10 }}>
-          Plan a framework, not a script. Reading aloud costs marks under criterion 3.
+          Plan a framework, not a script, and speak to your audience rather than reading aloud.
         </p>
       </div>
 
