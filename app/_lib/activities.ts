@@ -10,33 +10,33 @@ import type { Criterion } from "./rubric";
 export const UNIT_META: Record<number, { title: string; colour: string; blurb: string }> = {
   1: {
     title: "Getting started with a presentation",
-    colour: "#12284a",
+    colour: "var(--u1)",
     blurb: "The five stages of a talk, opening phrases, main themes and sub-themes, pauses and tone.",
   },
   2: {
     title: "Organizing materials",
-    colour: "#2e6b3e",
+    colour: "var(--u2)",
     blurb: "Narrowing a topic, lead-in phrases, and linking the body of the talk.",
   },
   3: {
     title: "Acknowledging academic sources",
-    colour: "#5b3a8c",
+    colour: "var(--u3)",
     blurb: "Citing sources aloud, integrating evidence, and ending a talk properly.",
   },
   4: {
     title: "Delivering with high impact",
-    colour: "#1f7a8c",
+    colour: "var(--u4)",
     blurb: "Alternative openings, the language that goes with them, and word stress for emphasis.",
   },
   5: {
     title: "Putting it together",
-    colour: "#b8860f",
+    colour: "var(--u5)",
     blurb: "A complete five-minute presentation, marked on all five criteria.",
   },
 };
 
 export const unitMeta = (n: number) =>
-  UNIT_META[n] ?? { title: `Unit ${n}`, colour: "#12284a", blurb: "" };
+  UNIT_META[n] ?? { title: `Unit ${n}`, colour: "var(--forest)", blurb: "" };
 
 export const FOCUS: Record<string, Criterion["id"][]> = {
   a1: ["intro", "language"],
