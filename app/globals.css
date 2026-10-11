@@ -387,3 +387,153 @@ th { background: rgba(31, 122, 140, .12); color: var(--teal); }
   :root:not([data-theme="light"]) ol.guide li::before,
   :root:not([data-theme="light"]) .step .k { color: #08111d; }
 }
+
+/* =====================================================================
+   Tile design (October 2026)
+   Dark green header and footer, white page, light outlined panels,
+   line icons, one strong green button. Units keep their own colours.
+   ===================================================================== */
+:root {
+  --forest: #0f3d2e;
+  --green-btn: #146b5b;
+  --green-btn-h: #0f5a4c;
+  --mint: #eaf4f0;
+
+  --ink: #0f3d2e;
+  --ink-2: #145a41;
+  --teal: #146b5b;
+  --green: #146b5b;
+  --bg: #ffffff;
+  --card: #ffffff;
+  --text: #111111;
+  --muted: #6b6f6d;
+  --rule: #e3e6e4;
+  --tint: #f3f5f4;
+  --accent: var(--forest);
+  --radius: 16px;
+  --shadow: none;
+
+  --u1: #1d64b0;
+  --u2: #b7700d;
+  --u3: #6d43a8;
+  --u4: #c2492b;
+  --u5: #b0306a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --forest: #0b2a20;
+    --green-btn: #2f9c7f;
+    --green-btn-h: #3bb391;
+    --mint: #12261d;
+    --ink: #8edcb5;
+    --ink-2: #a9e6c7;
+    --teal: #6fcf9f;
+    --green: #6fcf9f;
+    --bg: #0c1210;
+    --card: #121a17;
+    --text: #e8eeeb;
+    --muted: #9aa8a1;
+    --rule: #26332d;
+    --tint: #18221e;
+    --u1: #79b0ec; --u2: #e3a64a; --u3: #b394e6; --u4: #ef8a6f; --u5: #ea7eaf;
+  }
+}
+
+body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+/* header */
+.sitehead { background: var(--forest); box-shadow: none; border-bottom: 0; }
+.sitehead::before { display: none; }
+.sitehead .brand b { color: #fff; }
+.sitehead .brand i { color: rgba(255, 255, 255, .7); }
+.brand .mk, :root:not([data-theme="light"]) .brand .mk { background: #fff; color: var(--forest); }
+.sitenav a, .sitenav button { color: rgba(255, 255, 255, .82); }
+.sitenav a:hover, .sitenav button:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+.sitenav a[aria-current="page"] { background: rgba(255, 255, 255, .15); color: #fff; }
+.sitenav a.cta, .sitenav button.cta-out { background: #fff; color: var(--forest); }
+
+/* panels: white, thin grey outline, no coloured tops */
+.card, .card:nth-child(n) { --accent: var(--forest); background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: none; padding: 20px; }
+.card h3 { color: var(--text); font-size: 17px; }
+.card[style*="border-left"] { border-top-color: var(--rule); }
+.card ul li::marker { color: var(--muted); }
+
+/* page heading */
+.pagehead { margin: 6px 0 22px; }
+.pagehead h1 { font-size: 30px; letter-spacing: -.4px; }
+.pagehead .lead { color: var(--muted); font-size: 16px; margin: 6px 0 0; }
+
+/* tiles */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.tile {
+  display: block; text-decoration: none; color: inherit; background: var(--card);
+  border: 1px solid var(--rule); border-radius: var(--radius); padding: 20px 20px 22px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.tile:hover { border-color: color-mix(in srgb, var(--ic, var(--forest)) 35%, var(--rule)); box-shadow: 0 2px 12px rgba(0, 0, 0, .05); }
+.tile .ico { color: var(--ic, var(--text)); }
+.tile h3 { font-size: 22px; margin: 14px 0 6px; letter-spacing: -.2px; }
+.tile p { margin: 0; color: var(--muted); font-size: 15.5px; line-height: 1.45; }
+@media (max-width: 760px) {
+  .tiles { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tile { padding: 18px; }
+  .tile h3 { font-size: 20px; }
+  .pagehead h1 { font-size: 25px; }
+}
+
+/* next step */
+.nextstep {
+  display: block; text-decoration: none; color: inherit; background: var(--card);
+  border: 1px solid var(--rule); border-radius: var(--radius); padding: 22px; margin-top: 14px;
+}
+.nextstep h3 { font-size: 22px; margin: 0 0 8px; }
+.nextstep p { margin: 0 0 16px; font-size: 17px; }
+.nextstep.notice { border-color: color-mix(in srgb, var(--u2) 45%, var(--rule)); background: color-mix(in srgb, var(--u2) 6%, var(--card)); }
+.nextstep.notice p { margin: 0; font-size: 15px; color: var(--muted); }
+
+/* buttons */
+.btn:not(.ghost):not(.gold):not(.rec),
+:root:not([data-theme="light"]) .btn:not(.ghost):not(.gold):not(.rec) { background: var(--green-btn); color: #fff; }
+.btn:not(.ghost):not(.gold):not(.rec):hover { background: var(--green-btn-h); }
+.btn.gold { background: var(--green-btn); color: #fff; }
+.btn.ghost { background: var(--card); color: var(--text); border: 1px solid var(--rule); }
+.btn.ghost:hover { border-color: #cfd6d2; }
+.btn.big { font-size: 18px; min-height: 56px; border-radius: 12px; gap: 10px; }
+.hero .btn.ghost { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .5); }
+
+/* hero (pages that still use it) */
+.hero { background: var(--forest); }
+.hero::before, .hero::after { display: none; }
+
+/* tables, pills, bars, tabs */
+th { background: var(--tint); color: var(--muted); }
+.pill { background: var(--tint); color: var(--text); }
+.bar > i, .rbar > i { background: var(--green-btn); }
+.seg button[aria-pressed="true"] { background: var(--green-btn); border-color: var(--green-btn); color: #fff; }
+.tabs { background: var(--tint); }
+.tabs button[aria-selected="true"] { color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+.lrow .tick.done { background: var(--green-btn); }
+ol.guide li::before { background: var(--forest); }
+.step .k, .step:nth-child(n) .k { background: var(--forest); color: #fff; }
+.note { background: var(--tint); border-color: var(--rule); }
+
+/* units: each unit carries its own colour */
+.ucard, .ucard:nth-child(n) { border: 1px solid var(--rule); }
+.ucard .n { color: var(--accent); font-size: 12px; letter-spacing: .6px; }
+.ucard h3 { color: var(--text); }
+.ucard .btn.ghost { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, var(--rule)); }
+.card.unitcol .meta .uchip, .uchip {
+  display: inline-block; background: var(--unit, var(--forest)); color: #fff;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; margin-right: 7px;
+}
+
+/* footer */
+.sitefoot { background: var(--forest); color: rgba(255, 255, 255, .75); margin-top: 24px; }
+.sitefoot::before { display: none; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sitenav a.cta,
+  :root:not([data-theme="light"]) .sitenav button.cta-out { background: #fff; color: var(--forest); }
+  :root:not([data-theme="light"]) .tile:hover { box-shadow: none; }
+}
