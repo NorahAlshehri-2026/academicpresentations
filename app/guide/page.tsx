@@ -22,7 +22,7 @@ export default function GuidePage() {
         <h3>Recording a speaking task</h3>
         <ol className="guide">
           <li>Open <b>Activities</b> and tap the activity your teacher set. <b>Units</b> has the short reading for each unit.</li>
-          <li>Run the preparation timer and plan a framework, not a script. Reading aloud costs marks under criterion 3.</li>
+          <li>Run the preparation timer and plan a framework, not a script, and speak to your audience rather than reading aloud.</li>
           <li>
             Tap <b>Start recording</b>. After a three-second count-in the clock counts down your speaking time. It
             turns gold in the last 15 seconds, red when you go over, and stops on its own 45 seconds after the target.
