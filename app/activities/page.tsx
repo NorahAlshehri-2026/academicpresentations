@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentProfile, serverClient } from "@/app/_lib/supabase";
 import { loadCourse } from "@/app/_lib/course";
-import { ACTIVITY_INFO, SKILL_GROUPS, FOCUS, CRIT_CLASS, MAX_ATTEMPTS } from "@/app/_lib/activities";
+import { ACTIVITY_INFO, SKILL_GROUPS, FOCUS, CRIT_CLASS, MAX_ATTEMPTS, unitMeta } from "@/app/_lib/activities";
 import { mmss } from "@/app/_lib/format";
 import { PreviewBanner } from "@/app/_components/StudentPreview";
 
@@ -68,6 +68,7 @@ export default async function ActivitiesPage() {
                     </div>
                     <p className="small muted" style={{ margin: "4px 0 0" }}>{info?.task ?? ""}</p>
                     <div className="meta">
+                      <span className="uchip" style={{ ["--unit" as any]: unitMeta(t.unit).colour }}>Unit {t.unit}</span>
                       {info?.source ?? `Unit ${t.unit}`} · prep {mmss(t.prep_seconds)} · speak {mmss(t.target_seconds)}
                     </div>
                   </Link>
