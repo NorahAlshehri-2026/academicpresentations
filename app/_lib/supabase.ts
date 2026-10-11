@@ -38,8 +38,8 @@ export function serverClient() {
 
 /**
  * The service role. Bypasses every policy in the database, so it is used for
- * exactly three things: inviting a user, writing AI feedback, and the nightly
- * purge. The "server-only" import at the top of this file makes the build fail
+ * exactly four things: inviting a user, writing AI feedback, the nightly
+ * purge, and clearing a deleted class's recording files. The "server-only" import at the top of this file makes the build fail
  * if it is ever pulled into a client component.
  */
 export function adminClient() {
