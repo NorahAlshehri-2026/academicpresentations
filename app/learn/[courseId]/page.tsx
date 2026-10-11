@@ -82,7 +82,7 @@ export default async function CoursePage({ params }: { params: { courseId: strin
           const meta = unitMeta(u);
           const rows = (lessons ?? []).filter((l: any) => l.unit === u);
           return (
-            <div className="card ucard" key={u} style={{ borderLeftColor: meta.colour, margin: 0 }}>
+            <div className="card ucard" key={u} style={{ ["--accent" as any]: meta.colour, margin: 0 }}>
               <div className="n">Unit {u}</div>
               <h3 style={{ margin: "4px 0 4px" }}>{meta.title}</h3>
               {meta.blurb && <p className="small muted" style={{ margin: "0 0 6px" }}>{meta.blurb}</p>}
