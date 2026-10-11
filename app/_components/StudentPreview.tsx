@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { mmss, metricsOf, paceLabel } from "@/app/_lib/format";
 import FeedbackList, { type FeedbackRow } from "./FeedbackList";
+import { objectivesFor, encodeObjectives, type Rating } from "@/app/_lib/objectives";
 
 /** The strip at the top of a page that a teacher or administrator is seeing as a student would. */
 export function PreviewBanner({ saving }: { saving?: boolean }) {
@@ -32,12 +33,29 @@ const SAMPLE_FEEDBACK: FeedbackRow[] = [
   },
 ];
 
+/** Sample classmate feedback on a units 1–4 task: the peer checklist plus comments. */
+function sampleChecklistFeedback(objectives: string[]): FeedbackRow[] {
+  const pattern: Rating[] = ["yes", "yes", "partly", "yes", "no"];
+  return [
+    {
+      ...SAMPLE_FEEDBACK[0],
+      scores: null,
+      strengths: encodeObjectives(
+        objectives.map((o, i) => [o, pattern[i % pattern.length]] as [string, Rating]),
+        "Your opening was clear and friendly."
+      ),
+    },
+  ];
+}
+
 /**
  * What a saved attempt looks like to a student: the player, timing, the
  * delete or lock, the share list and the feedback. Sample content only; the
  * buttons do nothing.
  */
-export function SampleAttempt({ target }: { target: number }) {
+export function SampleAttempt({ target, activityKey }: { target: number; activityKey?: string | null }) {
+  const objectives = objectivesFor(activityKey);
+  const feedback = objectives ? sampleChecklistFeedback(objectives) : SAMPLE_FEEDBACK;
   // realistic sample numbers: a little under the target, at a comfortable pace
   const secs = Math.round(target * 0.92);
   const base = metricsOf(SAMPLE_TRANSCRIPT, secs, target);
@@ -67,7 +85,7 @@ export function SampleAttempt({ target }: { target: number }) {
       <div className="sep">
         <h3 style={{ fontSize: 14 }}>Share with a classmate</h3>
         <p className="tiny muted" style={{ marginTop: 4 }}>
-          Tap <b>Share</b> and this recording appears on their <b>Shared with me</b> page, ready for them to score.
+          Tap <b>Share</b> and this recording appears on their <b>Shared with me</b> page, ready for their feedback.
         </p>
         {["Classmate A", "Classmate B"].map((n, i) => (
           <div className="mate" key={n}>
@@ -81,12 +99,12 @@ export function SampleAttempt({ target }: { target: number }) {
 
       <div className="sep">
         <h3 style={{ fontSize: 14 }}>Feedback</h3>
-        <FeedbackList feedback={SAMPLE_FEEDBACK} viewerId="" emptyText="" />
+        <FeedbackList feedback={feedback} viewerId="" emptyText="" />
         <button type="button" className="btn gold block" style={{ marginTop: 12 }} disabled>
           Write the feedback request
         </button>
         <p className="tiny muted" style={{ marginTop: 6 }}>
-          Free AI feedback: unlocks once a classmate or the teacher has scored the attempt. The site writes the request,
+          Free AI feedback: unlocks once a classmate or the teacher has given feedback on the attempt. The site writes the request,
           the student pastes it into any free assistant (Claude, ChatGPT, Gemini) and pastes the answer back. The
           teacher&rsquo;s official mark appears above the feedback.
         </p>
