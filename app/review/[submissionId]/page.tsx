@@ -9,6 +9,7 @@ import PeerFeedback from "@/app/_components/PeerFeedback";
 import MarkForm from "@/app/_components/MarkForm";
 import FeedbackList, { type FeedbackRow } from "@/app/_components/FeedbackList";
 import DeleteAttempt from "@/app/_components/DeleteAttempt";
+import { loadDeadlines, fmtDue } from "@/app/_lib/due";
 
 /**
  * One recording, opened by someone who is not its owner: a classmate it was
@@ -65,6 +66,11 @@ export default async function ReviewPage({ params }: { params: { submissionId: s
   const { data: teaches } = await supabase.from("sections").select("id").eq("id", sub.section_id).eq("teacher_id", profile.id).maybeSingle();
   const canMark = !!teaches || profile.role === "admin";
 
+  // recorded after the class's deadline for this activity? (the due time, or null)
+  const { rows: dueRows } = await loadDeadlines(supabase, [sub.section_id]);
+  const dueAt = dueRows.find((d) => d.lesson_id === sub.lesson?.id)?.due_at ?? null;
+  const late = dueAt && new Date(sub.created_at).getTime() > new Date(dueAt).getTime() ? dueAt : null;
+
   return (
     <>
       <div className="card">
@@ -73,7 +79,10 @@ export default async function ReviewPage({ params }: { params: { submissionId: s
         </Link>
         <div className="spread" style={{ marginTop: 12 }}>
           <h3 style={{ fontSize: 18 }}>{sub.owner?.full_name ?? "Student"}</h3>
-          <span className={`pill ${sub.attempt_no >= MAX_ATTEMPTS ? "c3" : "c5"}`}>Attempt {sub.attempt_no}</span>
+          <span className="row" style={{ gap: 6 }}>
+            {late && <span className="pill late-pill" title={`Recorded after the deadline (${fmtDue(late)})`}>Late</span>}
+            <span className={`pill ${sub.attempt_no >= MAX_ATTEMPTS ? "c3" : "c5"}`}>Attempt {sub.attempt_no}</span>
+          </span>
         </div>
         <div className="meta">
           {sub.lesson?.title} · {mmss(sub.duration_seconds)} of {mmss(target)} · {fmtDate(sub.created_at)}
