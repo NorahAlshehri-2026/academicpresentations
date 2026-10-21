@@ -698,3 +698,138 @@ a.trk:hover, a.trk-chip:hover { filter: brightness(.95); text-decoration: none; 
 /* count pills on the class cards */
 .pill.p-joined { background: color-mix(in srgb, #2f5fd0 13%, var(--card)); color: color-mix(in srgb, #2f5fd0 85%, var(--text)); }
 .pill.p-marked { background: color-mix(in srgb, #1f9d63 15%, var(--card)); color: color-mix(in srgb, #1f9d63 80%, var(--text)); }
+
+/* ---------------------------------------------------------------------
+   Deadlines: calendar picker, class calendar, due pills and Late tags
+   --------------------------------------------------------------------- */
+.btn.act.k-deadline { --act: #4338ca; }   /* set or change a deadline */
+.btn.act.k-calendar { --act: #0b6e99; }   /* add to a calendar app (.ics) */
+
+/* month header shared by both calendars */
+.cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.cal-head b { font-size: 15px; letter-spacing: -.1px; min-width: 130px; text-align: center; }
+.cal-nav {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--rule); background: var(--card);
+  color: var(--text); font-size: 17px; line-height: 1; cursor: pointer; display: inline-grid; place-items: center;
+}
+.cal-nav:hover { background: var(--tint); }
+.cal-today {
+  margin-left: auto; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--rule);
+  background: var(--card); color: var(--text); font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.cal-today:hover { background: var(--tint); }
+.cal-dow { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); text-align: center; padding: 4px 0; }
+.cal-dow.wk { color: color-mix(in srgb, var(--muted) 70%, #c2492b); }
+
+/* the date picker */
+.cal {
+  border: 1px solid var(--rule); border-radius: 14px; padding: 12px; background: var(--card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px rgba(15, 61, 46, .06); width: 100%; max-width: 330px;
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-day {
+  position: relative; aspect-ratio: 1; border: 0; border-radius: 10px; background: transparent; color: var(--text);
+  font-size: 13.5px; font-weight: 600; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.cal-day:hover:not(:disabled) { background: color-mix(in srgb, var(--forest) 10%, var(--card)); }
+.cal-day.wk { background: color-mix(in srgb, var(--tint) 70%, transparent); }
+.cal-day.other { color: var(--muted); opacity: .55; }
+.cal-day.today { box-shadow: inset 0 0 0 2px var(--forest); }
+.cal-day.sel, .cal-day.sel:hover { background: var(--forest); color: #fff; opacity: 1; }
+.cal-day:disabled { color: var(--muted); opacity: .35; cursor: not-allowed; text-decoration: line-through; text-decoration-thickness: 1px; }
+.cal-day.busy::after {
+  content: ""; position: absolute; left: 50%; bottom: 5px; width: 5px; height: 5px; margin-left: -2.5px;
+  border-radius: 50%; background: #4338ca;
+}
+.cal-day.sel.busy::after { background: #fff; }
+
+/* the class's month calendar */
+.calv { border: 1px solid var(--rule); border-radius: 14px; padding: 12px; margin-top: 12px; background: var(--card); }
+.calv-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.calv-day {
+  min-height: 84px; border: 1px solid var(--rule); border-radius: 10px; padding: 5px; display: flex; flex-direction: column; gap: 3px;
+  background: var(--card); min-width: 0;
+}
+.calv-day.wk { background: color-mix(in srgb, var(--tint) 70%, var(--card)); }
+.calv-day.other { opacity: .5; }
+.calv-day .n { font-size: 12px; font-weight: 700; color: var(--muted); align-self: flex-end; line-height: 1.6; padding: 0 5px; border-radius: 999px; }
+.calv-day.today { border-color: var(--forest); box-shadow: inset 0 0 0 1px var(--forest); }
+.calv-day.today .n { background: var(--forest); color: #fff; }
+.calv-ev {
+  display: block; width: 100%; text-align: left; border: 0; cursor: pointer; font-size: 11.5px; font-weight: 600; line-height: 1.3;
+  padding: 3px 6px; border-radius: 6px; color: var(--text);
+  background: color-mix(in srgb, var(--unit) 14%, var(--card)); border-left: 3px solid var(--unit);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.calv-ev i { font-style: normal; font-weight: 800; color: var(--unit); }
+.calv-ev.past { opacity: .55; }
+.calv-ev:hover { filter: brightness(.96); }
+@media (max-width: 760px) {
+  .calv-day { min-height: 54px; padding: 3px; }
+  .calv-ev { font-size: 0; padding: 0; height: 7px; border-left-width: 0; background: var(--unit); border-radius: 99px; }
+  .calv-ev i { display: none; }
+}
+
+/* the list of activities with their deadlines */
+.dl-list { display: grid; gap: 10px; margin-top: 14px; }
+.dl-unit { border: 1px solid color-mix(in srgb, var(--unit) 28%, var(--rule)); border-left: 5px solid var(--unit); border-radius: 12px; padding: 8px 12px; }
+.dl-unit-hd { font-size: 12.5px; font-weight: 800; color: var(--unit); letter-spacing: .2px; padding: 2px 0 4px; }
+.dl-row { border-top: 1px solid var(--rule); padding: 8px 0; }
+.dl-row:first-of-type { border-top: 0; }
+.dl-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.dl-title { font-weight: 600; font-size: 14.5px; flex: 1 1 180px; }
+.dl-actions { display: flex; gap: 6px; margin-left: auto; }
+.dl-pill, .due-pill {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+  background: color-mix(in srgb, #4338ca 11%, var(--card)); color: color-mix(in srgb, #4338ca 85%, var(--text));
+}
+.dl-pill i, .due-pill i { font-style: normal; font-weight: 500; opacity: .85; }
+.dl-pill.none { background: var(--tint); color: var(--muted); font-weight: 600; }
+.dl-pill.soon, .due-pill.soon { background: color-mix(in srgb, #d08a12 16%, var(--card)); color: color-mix(in srgb, #b7700d 85%, var(--text)); }
+.dl-pill.past, .due-pill.past { background: var(--tint); color: var(--muted); }
+.due-pill.overdue { background: color-mix(in srgb, #c2392b 14%, var(--card)); color: color-mix(in srgb, #c2392b 85%, var(--text)); }
+
+.dl-editor { margin-top: 10px; padding: 12px; border-radius: 12px; background: color-mix(in srgb, #4338ca 4%, var(--card)); border: 1px solid color-mix(in srgb, #4338ca 18%, var(--rule)); }
+.dl-toggle { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--rule); border-radius: 999px; background: var(--card); }
+.dl-toggle button {
+  border: 0; background: transparent; color: var(--muted); padding: 6px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer;
+}
+.dl-toggle button[aria-pressed="true"] { background: #4338ca; color: #fff; }
+.dl-pick { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; align-items: flex-start; }
+.dl-side { flex: 1 1 220px; min-width: 0; }
+.dl-side select, .dl-side input { width: 100%; }
+.chip {
+  border: 1px solid var(--rule); background: var(--card); color: var(--text); border-radius: 999px;
+  padding: 5px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.chip:hover { background: var(--tint); }
+.chip.on { background: var(--forest); border-color: var(--forest); color: #fff; }
+.dl-summary { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--rule); display: grid; gap: 2px; }
+.dl-summary b { font-size: 15px; color: #4338ca; }
+.dl-summary.empty { border-style: dashed; }
+
+/* on the activity page */
+.due-banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 0 14px; padding: 12px 14px; border-radius: 12px;
+  background: color-mix(in srgb, #4338ca 8%, var(--card)); border: 1px solid color-mix(in srgb, #4338ca 25%, var(--rule));
+  border-left: 5px solid #4338ca;
+}
+.due-banner.soon { background: color-mix(in srgb, #d08a12 10%, var(--card)); border-color: color-mix(in srgb, #d08a12 35%, var(--rule)); border-left-color: #d08a12; }
+.due-banner.past { background: color-mix(in srgb, #c2392b 8%, var(--card)); border-color: color-mix(in srgb, #c2392b 30%, var(--rule)); border-left-color: #c2392b; }
+
+/* Late and overdue */
+.late-pill { background: #c2392b !important; color: #fff !important; }
+.late-tag {
+  font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  background: #c2392b; color: #fff; border-radius: 4px; padding: 1px 4px; margin-left: 4px;
+}
+.trk.overdue, .trk-chip.overdue {
+  --c: #c2392b;
+  background: color-mix(in srgb, var(--c) 12%, var(--card)); color: color-mix(in srgb, var(--c) 80%, var(--text));
+  border-color: color-mix(in srgb, var(--c) 45%, transparent); font-size: 12px;
+}
+.trk-chip.overdue { font-size: 13.5px; }
+.trk.late { padding-right: 5px; }
+.trk-chip .due-line { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); opacity: 1; margin-top: 1px; }
