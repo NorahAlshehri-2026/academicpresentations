@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { currentProfile, serverClient } from "@/app/_lib/supabase";
 import ProfileCards, { type ProfileSubmission } from "@/app/_components/ProfileCards";
 import { CRIT_CLASS, FOCUS, MAX_ATTEMPTS } from "@/app/_lib/activities";
+import { courseGrade } from "@/app/_lib/scores";
+import { StudentTracker, Legend } from "@/app/_components/ProgressTracker";
 
 export default async function ProgressPage() {
   const profile = await currentProfile();
@@ -40,21 +42,57 @@ export default async function ProgressPage() {
     mark: (marks ?? []).find((m: any) => m.submission_id === s.id)?.total ?? null,
   }));
 
+  // the digital tracker: 10 points per activity, 100 in all
+  const taskList = (tasks ?? []) as any[];
+  const grade = courseGrade(
+    profile.id,
+    taskList,
+    subs.map((s) => ({ id: s.id, student_id: profile.id, lesson_id: s.lesson_id, attempt_no: s.attempt_no })),
+    (marks ?? []) as any[]
+  );
+  const tracker = taskList.length > 0 && (
+    <div className="card">
+      <div className="spread">
+        <h3>Your points</h3>
+        <span className="pill">10 activities × 10 points = 100</span>
+      </div>
+      <p className="tiny muted" style={{ marginTop: 4 }}>
+        Each activity is worth 10 points, worked out from your teacher&apos;s official mark out of 20 (16/20 = 8
+        points). Tap an activity to open it.
+      </p>
+      <Legend />
+      <div style={{ marginTop: 12 }}>
+        <StudentTracker
+          tasks={taskList}
+          grade={grade}
+          hrefFor={(a) => {
+            const t = taskList.find((x) => x.id === a.taskId);
+            return t ? `/learn/${t.course_id}/${t.id}` : null;
+          }}
+        />
+      </div>
+    </div>
+  );
+
   if (!rows.length) {
     return (
-      <div className="card">
-        <h3>Your presentation profile</h3>
-        <p className="small muted">
-          Nothing recorded yet. Finish one speaking task and this page fills with your scores by criterion, your
-          timing, and how you move over the term.
-        </p>
-        <Link className="btn gold block" style={{ marginTop: 12 }} href="/activities">Choose an activity</Link>
-      </div>
+      <>
+        {tracker}
+        <div className="card">
+          <h3>Your presentation profile</h3>
+          <p className="small muted">
+            Nothing recorded yet. Finish one speaking task and this page fills with your scores by criterion, your
+            timing, and how you move over the term.
+          </p>
+          <Link className="btn gold block" style={{ marginTop: 12 }} href="/activities">Choose an activity</Link>
+        </div>
+      </>
     );
   }
 
   return (
     <>
+      {tracker}
       <ProfileCards title="Your presentation profile" subs={rows} taskCount={tasks?.length ?? 10} />
       <div className="card">
         <h3>Task coverage</h3>
