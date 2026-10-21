@@ -8,7 +8,7 @@ type Item = [href: string, label: string, cta?: boolean];
 
 /**
  * The header links, laid out like the original practice studio:
- * Home · Units · Activities · My recordings · Shared with me · Rubric · Guide · My progress.
+ * Home · Guide · Units · Activities · My recordings · Shared with me · Rubric · My progress.
  * Staff get the same course pages (as a student preview) plus their own.
  */
 export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?: boolean }) {
@@ -16,22 +16,22 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
 
   let items: Item[];
   if (!role) {
-    items = [["/", "Home"], ["/courses", "Courses"], ["/rubric", "Rubric"], ["/guide", "Guide"]];
+    items = [["/", "Home"], ["/guide", "Guide"], ["/courses", "Courses"], ["/rubric", "Rubric"]];
   } else if (role === "student") {
     items = [
       ["/", "Home"],
+      ["/guide", "Guide"],
       ["/units", "Units"],
       ["/activities", "Activities"],
       ["/recordings", "My recordings"],
       ["/shared", "Shared with me"],
       ["/rubric", "Rubric"],
-      ["/guide", "Guide"],
       ["/progress", "My progress", true],
     ];
   } else {
-    items = [["/", "Home"], ["/units", "Units"], ["/activities", "Activities"], ["/teach", "My classes"]];
+    items = [["/", "Home"], ["/guide", "Guide"], ["/units", "Units"], ["/activities", "Activities"], ["/teach", "My classes"]];
     if (role === "admin") items.push(["/admin", isOwner ? "Admin" : "Academy"]);
-    items.push(["/rubric", "Rubric"], ["/guide", "Guide"]);
+    items.push(["/rubric", "Rubric"]);
   }
 
   const current = (href: string) =>
