@@ -5,6 +5,7 @@ import { loadCourse } from "@/app/_lib/course";
 import { ACTIVITY_INFO, MAX_ATTEMPTS, unitMeta } from "@/app/_lib/activities";
 import { mmss } from "@/app/_lib/format";
 import { PreviewBanner } from "@/app/_components/StudentPreview";
+import { studentDue, dueState, fmtDueDay, fmtDueTime } from "@/app/_lib/due";
 
 export default async function ActivitiesPage() {
   const profile = await currentProfile();
@@ -17,6 +18,20 @@ export default async function ActivitiesPage() {
     .from("submissions")
     .select("lesson_id, attempt_no")
     .eq("student_id", profile.id);
+
+  // deadlines set by the teacher of the student's class (optional)
+  const { due } = await studentDue(serverClient(), profile.id);
+  const duePill = (lessonId: string) => {
+    const at = due[lessonId];
+    if (!at) return null;
+    const st = dueState(at);
+    const started = (mine ?? []).some((s: any) => s.lesson_id === lessonId);
+    return (
+      <span className={`pill due-pill ${st === "past" && !started ? "overdue" : st}`} title="Riyadh time">
+        {st === "past" ? (started ? "Deadline passed" : "Overdue") : "Due"} {fmtDueDay(at)} · {fmtDueTime(at)}
+      </span>
+    );
+  };
 
   const attemptPill = (lessonId: string) => {
     const at = (mine ?? []).filter((s: any) => s.lesson_id === lessonId);
@@ -61,6 +76,7 @@ export default async function ActivitiesPage() {
                     <div className="spread">
                       <h3>{t.title}</h3>
                       <div className="row" style={{ gap: 6 }}>
+                        {duePill(t.id)}
                         {attemptPill(t.id)}
                         <span className="pill" style={{ background: `color-mix(in srgb, ${unitMeta(t.unit).colour} 14%, transparent)`, color: unitMeta(t.unit).colour }}>
                           {mmss(t.target_seconds)}
