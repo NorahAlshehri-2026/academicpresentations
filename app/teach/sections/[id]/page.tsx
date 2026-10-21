@@ -9,6 +9,7 @@ import ClassLink from "@/app/_components/ClassLink";
 import AddStudent from "@/app/_components/AddStudent";
 import RemoveStudent from "@/app/_components/RemoveStudent";
 import DeleteSection from "@/app/_components/DeleteSection";
+import { ClassTracker, Legend } from "@/app/_components/ProgressTracker";
 
 /** The gradebook for one class: who has joined, what they have done, their marks. */
 export default async function Gradebook({ params }: { params: { id: string } }) {
@@ -82,11 +83,11 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
         </div>
         <div className="meta">{sec.term} · Teacher: {sec.teacher?.full_name ?? "—"}</div>
         <div className="row" style={{ marginTop: 10, gap: 8 }}>
-          <Link className="btn ghost sm" href={`/learn/${sec.course_id}`}>
+          <Link className="btn sm act" style={{ ["--act" as any]: "#1f7fa8" }} href={`/learn/${sec.course_id}`}>
             Student preview
           </Link>
-          <a className="btn ghost sm" href={`/teach/sections/${sec.id}/workbook`} download>
-            Download progress workbook (Excel)
+          <a className="btn sm act" style={{ ["--act" as any]: "#1d7a45" }} href={`/teach/sections/${sec.id}/workbook`} download>
+            ⬇ Download progress workbook (Excel)
           </a>
         </div>
         {toMark > 0 && (
@@ -125,7 +126,7 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
                 <thead>
                   <tr>
                     <th>Student</th><th>Email</th><th>Joined</th><th>Attempts</th><th>Tasks</th>
-                    <th>To mark</th><th>Mean /20</th><th title="Each unit is worth 20; unmarked activities count as 0">Total /100</th><th>Last</th><th></th>
+                    <th>To mark</th><th>Mean /20</th><th title="10 points per activity; unmarked activities count as 0">Total /100</th><th>Last</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,8 +150,9 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
               </table>
             </div>
             <p className="tiny muted" style={{ marginTop: 8 }}>
-              Open a student to hear their attempts and mark them. Total /100: each unit is worth 20 (the average of its
-              activities&apos; marks); an activity not yet marked counts as 0. Removing a student keeps their recordings and marks.
+              Open a student to hear their attempts and mark them. Total /100: each of the ten activities is worth 10
+              points (its mark out of 20, halved); an activity not yet marked counts as 0. Removing a student keeps their
+              recordings and marks.
             </p>
           </>
         ) : (
@@ -158,44 +160,32 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
         )}
       </div>
 
+      {students.length > 0 && (
+        <div className="card">
+          <div className="spread">
+            <h3>Progress tracker</h3>
+            <span className="pill">10 activities × 10 points = 100</span>
+          </div>
+          <p className="tiny muted" style={{ marginTop: 4 }}>
+            Each activity is worth 10 points, worked out from its official mark out of 20 (16/20 = 8 points). Click a
+            coloured cell to listen and mark, or to change a mark. A dot means a newer attempt is waiting for a mark.
+          </p>
+          <Legend />
+          <ClassTracker
+            tasks={taskList}
+            rows={rows.map((r) => ({
+              id: r.st.id,
+              name: r.st.full_name,
+              href: `/teach/sections/${sec.id}/students/${r.st.id}`,
+              grade: r.grade,
+            }))}
+            hrefFor={(a) => (a.latestId ? `/review/${a.latestId}` : null)}
+          />
+        </div>
+      )}
+
       {allSubs.length > 0 && (
         <>
-          <div className="card">
-            <h3>Who has done what</h3>
-            <p className="tiny muted">Attempts per task. A ✓ means the latest attempt has an official mark. Click a cell to mark it or change the mark.</p>
-            <div className="tablewrap" style={{ marginTop: 10 }}>
-              <table style={{ minWidth: 760 }}>
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    {taskList.map((t) => <th key={t.id}>{t.title}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.st.id}>
-                      <td><b>{r.st.full_name}</b></td>
-                      {taskList.map((t) => {
-                        const att = r.mine.filter((s) => s.lesson_id === t.id);
-                        const latest = att.sort((a, b) => b.attempt_no - a.attempt_no)[0];
-                        const marked = latest && allMarks.find((m) => m.submission_id === latest.id);
-                        return (
-                          <td key={t.id} style={{ textAlign: "center" }}>
-                            {att.length ? (
-                              <Link href={`/review/${latest.id}`} title={marked ? "Open to change the mark" : "Open to mark"}>
-                                {`${att.length}/2${marked ? ` ✓ ${marked.total}` : ""}`}
-                              </Link>
-                            ) : ""}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
           <div className="card">
             <h3>Class profile</h3>
             <div style={{ marginTop: 10 }}>
