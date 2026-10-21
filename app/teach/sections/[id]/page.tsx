@@ -10,6 +10,8 @@ import AddStudent from "@/app/_components/AddStudent";
 import RemoveStudent from "@/app/_components/RemoveStudent";
 import DeleteSection from "@/app/_components/DeleteSection";
 import { ClassTracker, Legend } from "@/app/_components/ProgressTracker";
+import DeadlinesPanel from "@/app/_components/DeadlinesPanel";
+import { loadDeadlines } from "@/app/_lib/due";
 
 /** The gradebook for one class: who has joined, what they have done, their marks. */
 export default async function Gradebook({ params }: { params: { id: string } }) {
@@ -59,13 +61,17 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
   const allMarks = (marks ?? []) as any[];
   const taskList = (tasks ?? []) as any[];
 
+  // optional deadlines, one per activity (DEADLINES-2026-10.sql)
+  const { rows: deadlines, missing: deadlinesMissing } = await loadDeadlines(supabase, [sec.id]);
+  const due = Object.fromEntries(deadlines.map((d) => [d.lesson_id, d.due_at]));
+
   const rows = students.map((st) => {
     const mine = allSubs.filter((s) => s.student_id === st.id);
     const myMarks = allMarks.filter((m) => m.student_id === st.id);
     const mean = myMarks.length ? Math.round((myMarks.reduce((a, m) => a + m.total, 0) / myMarks.length) * 10) / 10 : null;
     const last = mine.map((s) => s.created_at).sort().pop() ?? null;
     const unmarked = mine.filter((s) => !allMarks.some((m) => m.submission_id === s.id)).length;
-    const grade = courseGrade(st.id, taskList, allSubs, allMarks);
+    const grade = courseGrade(st.id, taskList, allSubs, allMarks, due);
     return { st, mine, myMarks, mean, last, unmarked, grade, covered: new Set(mine.map((s) => s.lesson_id)).size };
   });
 
@@ -158,6 +164,32 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
         ) : (
           <p className="small muted">Nobody has joined yet. Share the class link or add students by email above.</p>
         )}
+      </div>
+
+      <div className="card">
+        <div className="spread">
+          <h3>Deadlines</h3>
+          <div className="row" style={{ gap: 8 }}>
+            <span className="pill">Optional · {deadlines.length} of {taskList.length} set</span>
+            {deadlines.length > 0 && (
+              <a className="btn sm act k-calendar" href={`/calendar?section=${sec.id}`} title="Opens in Apple Calendar, Google Calendar, Outlook or any calendar app">
+                ⬇ Add all to calendar (.ics)
+              </a>
+            )}
+          </div>
+        </div>
+        <p className="tiny muted" style={{ marginTop: 4 }}>
+          Give any activity a deadline, or leave it with none. Times are Riyadh time. Students see the deadlines on their
+          activities and can add them to their own calendar. Anything recorded after a deadline is still accepted and is
+          marked <b>Late</b>; you decide the mark.
+        </p>
+        <DeadlinesPanel
+          sectionId={sec.id}
+          tasks={taskList.map((t) => ({ id: t.id, title: t.title, unit: t.unit }))}
+          deadlines={deadlines}
+          canEdit={own || isAdmin}
+          missing={deadlinesMissing}
+        />
       </div>
 
       {students.length > 0 && (
