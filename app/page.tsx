@@ -4,6 +4,8 @@ import { loadCourse } from "@/app/_lib/course";
 import { firstName, mmss } from "@/app/_lib/format";
 import Icon from "@/app/_components/Icon";
 import { PreviewBanner } from "@/app/_components/StudentPreview";
+import DueNotice, { type DueItem } from "@/app/_components/DueNotice";
+import { studentDue, riyadhParts, fromRiyadh } from "@/app/_lib/due";
 
 type Tile = { href: string; icon: string; colour: string; title: string; text: string };
 
@@ -81,6 +83,21 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
     // the student Home, with sample details, for teachers and administrators
     const { course, lessons } = await loadCourse();
     const first = lessons.find((l) => l.kind === "practice") ?? null;
+    // a sample deadline three days from now, 11:59 pm Riyadh time
+    const t = riyadhParts(new Date());
+    const sampleDue: DueItem[] =
+      course && first
+        ? [
+            {
+              lessonId: first.id,
+              title: first.title,
+              href: `/learn/${course.id}/${first.id}`,
+              dueAt: fromRiyadh(t.y, t.m, t.d + 3, 23, 59).toISOString(),
+              note: null,
+              calHref: null,
+            },
+          ]
+        : [];
     return (
       <>
         <PreviewBanner />
@@ -88,6 +105,7 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
           <h1>Welcome back, Sara</h1>
           <p className="lead">Section 101 · Semester 1, 2026-27 <span className="tiny">(sample details)</span></p>
         </div>
+        <DueNotice upcoming={sampleDue} overdue={[]} sample />
         <Tiles items={STUDENT_TILES} />
         {course && first ? (
           <NextStep
@@ -139,7 +157,7 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
 
   // ---------------------------------------------------------------- students
   const supabase = serverClient();
-  const [{ data: subs }, { data: shared }, { data: enrol }, { course, lessons }] = await Promise.all([
+  const [{ data: subs }, { data: shared }, { data: enrol }, { course, lessons }, deadlines] = await Promise.all([
     supabase.from("submissions").select("lesson_id").eq("student_id", profile.id),
     supabase
       .from("submission_shares")
@@ -153,6 +171,7 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
       .limit(1)
       .maybeSingle(),
     loadCourse(),
+    studentDue(supabase, profile.id),
   ]);
 
   const attempted = new Set(((subs ?? []) as any[]).map((s) => s.lesson_id));
@@ -163,6 +182,24 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
   ).length;
   const sec = (enrol as any)?.section;
 
+  // deadlines the teacher set for activities not recorded yet, nearest first
+  const now = Date.now();
+  const waitingDue: DueItem[] = course
+    ? practice
+        .filter((l) => deadlines.due[l.id] && !attempted.has(l.id))
+        .map((l) => ({
+          lessonId: l.id,
+          title: l.title,
+          href: `/learn/${course.id}/${l.id}`,
+          dueAt: deadlines.due[l.id],
+          note: deadlines.note[l.id] ?? null,
+          calHref: `/calendar?section=${deadlines.section[l.id]}&lesson=${l.id}`,
+        }))
+        .sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime())
+    : [];
+  const upcoming = waitingDue.filter((d) => new Date(d.dueAt).getTime() >= now);
+  const overdue = waitingDue.filter((d) => new Date(d.dueAt).getTime() < now);
+
   return (
     <>
       <div className="pagehead">
@@ -171,6 +208,8 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
           {sec ? `Section ${sec.number} · ${sec.term}` : "Open your class link to join your class."}
         </p>
       </div>
+
+      <DueNotice upcoming={upcoming} overdue={overdue} />
 
       <Tiles items={STUDENT_TILES} />
 
