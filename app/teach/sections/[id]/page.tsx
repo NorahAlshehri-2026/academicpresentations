@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { currentProfile, serverClient, homeFor } from "@/app/_lib/supabase";
 import { RUBRIC } from "@/app/_lib/rubric";
-import { criterionAverages, weakest } from "@/app/_lib/scores";
+import { criterionAverages, weakest, courseGrade } from "@/app/_lib/scores";
 import { fmtDate } from "@/app/_lib/format";
 import { Radar, RADAR_LABELS } from "@/app/_components/Charts";
 import ClassLink from "@/app/_components/ClassLink";
@@ -63,7 +63,8 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
     const mean = myMarks.length ? Math.round((myMarks.reduce((a, m) => a + m.total, 0) / myMarks.length) * 10) / 10 : null;
     const last = mine.map((s) => s.created_at).sort().pop() ?? null;
     const unmarked = mine.filter((s) => !allMarks.some((m) => m.submission_id === s.id)).length;
-    return { st, mine, myMarks, mean, last, unmarked, covered: new Set(mine.map((s) => s.lesson_id)).size };
+    const grade = courseGrade(st.id, taskList, allSubs, allMarks);
+    return { st, mine, myMarks, mean, last, unmarked, grade, covered: new Set(mine.map((s) => s.lesson_id)).size };
   });
 
   const avg = criterionAverages(allSubs.flatMap((s) => s.feedback ?? []));
@@ -79,9 +80,14 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
           <span className="pill">{students.length} student{students.length === 1 ? "" : "s"}</span>
         </div>
         <div className="meta">{sec.term} · Teacher: {sec.teacher?.full_name ?? "—"}</div>
-        <Link className="btn ghost sm" href={`/learn/${sec.course_id}`} style={{ marginTop: 10 }}>
-          Student preview
-        </Link>
+        <div className="row" style={{ marginTop: 10, gap: 8 }}>
+          <Link className="btn ghost sm" href={`/learn/${sec.course_id}`}>
+            Student preview
+          </Link>
+          <a className="btn ghost sm" href={`/teach/sections/${sec.id}/workbook`} download>
+            Download progress workbook (Excel)
+          </a>
+        </div>
         {toMark > 0 && (
           <div className="note" style={{ marginTop: 10 }}>
             <b>{toMark}</b> attempt{toMark === 1 ? "" : "s"} waiting for a mark. Open a student to listen and mark.
@@ -105,11 +111,11 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
         {students.length ? (
           <>
             <div className="tablewrap" style={{ marginTop: 10 }}>
-              <table style={{ minWidth: 640 }}>
+              <table style={{ minWidth: 720 }}>
                 <thead>
                   <tr>
                     <th>Student</th><th>Email</th><th>Joined</th><th>Attempts</th><th>Tasks</th>
-                    <th>To mark</th><th>Mean /20</th><th>Last</th><th></th>
+                    <th>To mark</th><th>Mean /20</th><th title="Each unit is worth 20; unmarked activities count as 0">Total /100</th><th>Last</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,6 +130,7 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
                       <td>{r.covered}/{taskList.length}</td>
                       <td>{r.unmarked || "—"}</td>
                       <td>{r.mean ?? "—"}</td>
+                      <td><b>{r.grade.marked ? r.grade.total : "—"}</b></td>
                       <td>{fmtDate(r.last)}</td>
                       <td><RemoveStudent sectionId={sec.id} studentId={r.st.id} /></td>
                     </tr>
@@ -132,7 +139,8 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
               </table>
             </div>
             <p className="tiny muted" style={{ marginTop: 8 }}>
-              Open a student to hear their attempts and mark them. Removing a student keeps their recordings and marks.
+              Open a student to hear their attempts and mark them. Total /100: each unit is worth 20 (the average of its
+              activities&apos; marks); an activity not yet marked counts as 0. Removing a student keeps their recordings and marks.
             </p>
           </>
         ) : (
@@ -144,7 +152,7 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
         <>
           <div className="card">
             <h3>Who has done what</h3>
-            <p className="tiny muted">Attempts per task. A ✓ means the latest attempt has an official mark.</p>
+            <p className="tiny muted">Attempts per task. A ✓ means the latest attempt has an official mark. Click a cell to mark it or change the mark.</p>
             <div className="tablewrap" style={{ marginTop: 10 }}>
               <table style={{ minWidth: 760 }}>
                 <thead>
@@ -163,7 +171,11 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
                         const marked = latest && allMarks.find((m) => m.submission_id === latest.id);
                         return (
                           <td key={t.id} style={{ textAlign: "center" }}>
-                            {att.length ? `${att.length}/2${marked ? ` ✓ ${marked.total}` : ""}` : ""}
+                            {att.length ? (
+                              <Link href={`/review/${latest.id}`} title={marked ? "Open to change the mark" : "Open to mark"}>
+                                {`${att.length}/2${marked ? ` ✓ ${marked.total}` : ""}`}
+                              </Link>
+                            ) : ""}
                           </td>
                         );
                       })}
