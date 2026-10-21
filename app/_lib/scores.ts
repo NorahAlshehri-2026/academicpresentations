@@ -42,7 +42,7 @@ export function weakest(avg: Record<string, number | null>) {
 }
 
 type Task = { id: string; unit: number };
-type Attempt = { id: string; student_id: string; lesson_id: string; attempt_no: number };
+type Attempt = { id: string; student_id: string; lesson_id: string; attempt_no: number; created_at?: string | null };
 type Mark = { submission_id: string; total: number | string };
 
 /** Each speaking activity is worth this many points; ten activities make 100. */
@@ -58,8 +58,20 @@ export type ActivityState = "none" | "recorded" | "marked";
  * 0, so the total builds up over the term and is final once every activity is
  * marked. Units are shown as subtotals (a unit with three activities is worth
  * 30). With other than ten activities, the total is scaled to 100.
+ *
+ * With deadlines (`due`, lesson id -> ISO time), each activity also says
+ * whether the attempt that counts was recorded late, and whether it is
+ * overdue (nothing recorded and the deadline has passed). Late work is not
+ * marked down automatically: the teacher decides.
  */
-export function courseGrade(studentId: string, tasks: Task[], attempts: Attempt[], marks: Mark[]) {
+export function courseGrade(
+  studentId: string,
+  tasks: Task[],
+  attempts: Attempt[],
+  marks: Mark[],
+  due: Record<string, string> = {},
+  now = Date.now()
+) {
   const markOf = (subId: string) => marks.find((m) => m.submission_id === subId);
   const r1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -71,6 +83,10 @@ export function courseGrade(studentId: string, tasks: Task[], attempts: Attempt[
     const mark = m ? Number(m.total) : null;
     const points = mark === null ? null : r1((Math.max(0, Math.min(20, mark)) / 20) * ACTIVITY_POINTS);
     const state: ActivityState = mark !== null ? "marked" : mine.length ? "recorded" : "none";
+    const dueAt = due[t.id] ?? null;
+    const counted = m ? mine.find((s) => s.id === m.submission_id) : mine[0];
+    const late = !!(dueAt && counted?.created_at && new Date(counted.created_at).getTime() > new Date(dueAt).getTime());
+    const overdue = !!(dueAt && state === "none" && new Date(dueAt).getTime() < now);
     return {
       taskId: t.id,
       unit: t.unit,
@@ -81,6 +97,9 @@ export function courseGrade(studentId: string, tasks: Task[], attempts: Attempt[
       mark,
       points,
       state,
+      dueAt,
+      late,
+      overdue,
     };
   });
 
@@ -107,6 +126,8 @@ export function courseGrade(studentId: string, tasks: Task[], attempts: Attempt[
     total: max ? r1((earned / max) * 100) : 0,
     marked: activities.filter((a) => a.state === "marked").length,
     done: activities.filter((a) => a.state !== "none").length,
+    late: activities.filter((a) => a.late).length,
+    overdue: activities.filter((a) => a.overdue).length,
     of: tasks.length,
   };
 }
