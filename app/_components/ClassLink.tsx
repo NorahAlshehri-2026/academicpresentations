@@ -111,26 +111,26 @@ export default function ClassLink({
       />
 
       <div className="row" style={{ marginTop: 8 }}>
-        <button type="button" className="btn sm" onClick={() => copy("link")}>
+        <button type="button" className="btn sm act k-copy" onClick={() => copy("link")}>
           {copied === "link" ? "Copied" : "Copy link"}
         </button>
-        <button type="button" className="btn ghost sm" onClick={() => copy("message")}>
+        <button type="button" className="btn sm act k-announce" onClick={() => copy("message")}>
           {copied === "message" ? "Copied" : "Copy announcement"}
         </button>
         <a
-          className="btn ghost sm"
+          className="btn sm act k-whatsapp"
           target="_blank"
           rel="noopener noreferrer"
           href={`https://wa.me/?text=${encodeURIComponent(message)}`}
         >
           WhatsApp
         </a>
-        <button type="button" className="btn ghost sm" onClick={newLink} disabled={busy}>
+        <button type="button" className="btn sm act k-newlink" onClick={newLink} disabled={busy}>
           New link
         </button>
         <button
           type="button"
-          className="btn ghost sm"
+          className={`btn sm act ${open ? "k-close" : "k-reopen"}`}
           onClick={toggle}
           disabled={busy}
           style={{ marginLeft: "auto" }}
