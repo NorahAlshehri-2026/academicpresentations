@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { unitMeta } from "@/app/_lib/activities";
 import { ACTIVITY_POINTS, type courseGrade } from "@/app/_lib/scores";
+import { fmtDue, fmtDueDay } from "@/app/_lib/due";
 
 type Grade = ReturnType<typeof courseGrade>;
 type Activity = Grade["activities"][number];
@@ -9,8 +10,9 @@ type Task = { id: string; title: string; unit: number; course_id?: string };
 /**
  * The digital progress tracker: ten activities, 10 points each, 100 in all.
  * Every activity is colour-coded — grey not started, amber recorded and
- * waiting for a mark, green marked (with its points) — and grouped by unit
- * in the unit's own colour.
+ * waiting for a mark, green marked (with its points), red overdue (a
+ * deadline passed with nothing recorded) — and grouped by unit in the unit's
+ * own colour. Work recorded after its deadline carries a red "Late" tag.
  *
  *   mode "class":   one row per student (the class gradebook)
  *   mode "student": one student's own tracker (My progress)
@@ -23,12 +25,16 @@ const TITLE: Record<Activity["state"], string> = {
 };
 
 function label(a: Activity) {
-  if (a.state === "marked") return `${TITLE.marked}: ${a.mark}/20 = ${a.points} of ${ACTIVITY_POINTS} points${a.pending ? " (a newer attempt is waiting for a mark)" : ""}`;
-  return TITLE[a.state];
+  const due = a.dueAt ? ` · due ${fmtDue(a.dueAt)}` : "";
+  const late = a.late ? " · recorded after the deadline (Late)" : "";
+  if (a.overdue) return `Overdue: nothing recorded${due}`;
+  if (a.state === "marked")
+    return `${TITLE.marked}: ${a.mark}/20 = ${a.points} of ${ACTIVITY_POINTS} points${a.pending ? " (a newer attempt is waiting for a mark)" : ""}${late}${due}`;
+  return `${TITLE[a.state]}${late}${due}`;
 }
 
 function Cell({ a, href, wide, title }: { a: Activity; href: string | null; wide?: boolean; title?: string }) {
-  const cls = `${wide ? "trk-chip" : "trk"} ${a.state}${a.pending && a.state === "marked" ? " pending" : ""}`;
+  const cls = `${wide ? "trk-chip" : "trk"} ${a.overdue ? "overdue" : a.state}${a.pending && a.state === "marked" ? " pending" : ""}${a.late ? " late" : ""}`;
   const value =
     a.state === "marked" ? (
       <>
@@ -37,16 +43,28 @@ function Cell({ a, href, wide, title }: { a: Activity; href: string | null; wide
       </>
     ) : a.state === "recorded" ? (
       "to mark"
+    ) : a.overdue ? (
+      "overdue"
     ) : (
       "—"
     );
+  const tag = a.late ? <em className="late-tag">Late</em> : null;
   const inner = wide ? (
     <>
-      <span>{title}</span>
-      <b>{value}</b>
+      <span>
+        {title}
+        {a.dueAt && <small className="due-line">Due {fmtDueDay(a.dueAt)}</small>}
+      </span>
+      <b>
+        {value}
+        {tag}
+      </b>
     </>
   ) : (
-    value
+    <>
+      {value}
+      {tag}
+    </>
   );
   return href ? (
     <Link className={cls} href={href} title={label(a)}>
@@ -65,6 +83,8 @@ export function Legend() {
       <span className="trk none">—</span> not started
       <span className="trk recorded">to mark</span> recorded, waiting for a mark
       <span className="trk marked">8<small>/10</small></span> marked: points out of 10
+      <span className="trk marked late">8<small>/10</small><em className="late-tag">Late</em></span> recorded after the deadline
+      <span className="trk overdue">overdue</span> deadline passed, nothing recorded
     </div>
   );
 }
