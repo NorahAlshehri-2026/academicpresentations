@@ -564,3 +564,114 @@ ol.guide li::before { background: var(--forest); }
   content: ""; position: absolute; left: 0; top: 8px; width: 15px; height: 15px;
   border: 2px solid var(--unit, var(--forest)); border-radius: 4px; background: var(--card);
 }
+
+/* ---------------------------------------------------------------------
+   Colour-coded header tabs (October 2026): every tab has its own colour
+   by what it is for. A tab is a soft tint of its colour with a coloured
+   dot; the page you are on is filled with it; action items are solid.
+   --------------------------------------------------------------------- */
+.sitenav [data-tone="home"]     { --tc: #ffffff; }
+.sitenav [data-tone="guide"]    { --tc: #5aa9ff; }
+.sitenav [data-tone="learn"]    { --tc: #3fd0e0; }
+.sitenav [data-tone="practice"] { --tc: #ffa23a; }
+.sitenav [data-tone="record"]   { --tc: #b48cff; }
+.sitenav [data-tone="share"]    { --tc: #ff7eb6; }
+.sitenav [data-tone="assess"]   { --tc: #ffd34d; }
+.sitenav [data-tone="teach"]    { --tc: #9db0ff; }
+.sitenav [data-tone="admin"]    { --tc: #ff8a6b; }
+.sitenav [data-tone="progress"] { --tc: #5fe08f; }
+
+.sitenav { gap: 5px; }
+@media (min-width: 761px) {
+  /* never hide a tab off the edge: wrap onto a second line instead */
+  .sitenav { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; overflow: visible; }
+  .sitenav a[data-tone], .sitenav button { padding: 8px 11px; font-size: 14px; }
+}
+.sitenav a[data-tone] {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  color: #fff; background: color-mix(in srgb, var(--tc) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tc) 40%, transparent);
+}
+.sitenav a[data-tone]::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--tc); flex: 0 0 auto;
+}
+.sitenav a[data-tone]:hover { color: #fff; background: color-mix(in srgb, var(--tc) 28%, transparent); }
+.sitenav a[data-tone][aria-current="page"] { background: var(--tc); border-color: var(--tc); color: #0b241b; }
+.sitenav a[data-tone][aria-current="page"]::before { background: #0b241b; }
+
+/* action items: filled in their colour whether or not you are on that page */
+.sitenav a.cta[data-tone],
+:root:not([data-theme="light"]) .sitenav a.cta[data-tone] { background: var(--tc); border-color: var(--tc); color: #0b241b; font-weight: 700; }
+.sitenav a.cta[data-tone]::before { background: #0b241b; }
+.sitenav a.cta[data-tone]:hover { filter: brightness(1.06); }
+.sitenav button.cta-out,
+:root:not([data-theme="light"]) .sitenav button.cta-out { background: #fff; color: var(--forest); border: 1px solid #fff; font-weight: 700; }
+
+/* coloured action buttons on pages: <a class="btn act" style="--act: #…"> */
+.btn.act:not(.ghost):not(.gold):not(.rec),
+:root:not([data-theme="light"]) .btn.act:not(.ghost):not(.gold):not(.rec) { background: var(--act, var(--green-btn)); color: #fff; }
+.btn.act:not(.ghost):not(.gold):not(.rec):hover { background: var(--act, var(--green-btn-h)); filter: brightness(.92); }
+
+/* ---------------------------------------------------------------------
+   Progress tracker: 10 activities x 10 points. Grey = not started,
+   amber = recorded and waiting for a mark, green = marked (points).
+   --------------------------------------------------------------------- */
+.trk-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+.trk, .trk-chip {
+  --c: #8a948f;
+  display: inline-flex; align-items: center; justify-content: center; gap: 2px; position: relative;
+  border-radius: 8px; font-weight: 700; text-decoration: none; border: 1px solid transparent;
+}
+.trk { min-width: 46px; height: 30px; padding: 0 8px; font-size: 13px; white-space: nowrap; }
+.trk small, .trk-chip small { font-weight: 500; font-size: 11px; opacity: .75; }
+.trk.none, .trk-chip.none { background: var(--tint); color: var(--muted); font-weight: 500; border-color: var(--rule); }
+.trk.recorded, .trk-chip.recorded {
+  --c: #d08a12;
+  background: color-mix(in srgb, var(--c) 15%, var(--card)); color: color-mix(in srgb, var(--c) 75%, var(--text));
+  border-color: color-mix(in srgb, var(--c) 50%, transparent);
+}
+.trk.recorded { font-size: 12px; }
+.trk.marked, .trk-chip.marked {
+  --c: #1f9d63;
+  background: color-mix(in srgb, var(--c) 15%, var(--card)); color: color-mix(in srgb, var(--c) 75%, var(--text));
+  border-color: color-mix(in srgb, var(--c) 50%, transparent);
+}
+.trk.pending::after, .trk-chip.pending::after {
+  content: ""; position: absolute; top: -4px; right: -4px; width: 9px; height: 9px; border-radius: 50%;
+  background: #d08a12; border: 2px solid var(--card);
+}
+a.trk:hover, a.trk-chip:hover { filter: brightness(.95); text-decoration: none; }
+
+.trk-table th.trk-unit {
+  background: color-mix(in srgb, var(--unit) 13%, var(--card)); color: var(--unit); text-align: center;
+  font-size: 12px; font-weight: 800; letter-spacing: .3px; border-bottom: 3px solid var(--unit);
+}
+.trk-table th.trk-act {
+  font-size: 11.5px; font-weight: 600; text-align: center; min-width: 72px; max-width: 120px;
+  white-space: normal; line-height: 1.25; color: var(--text); border-bottom: 2px solid color-mix(in srgb, var(--unit) 45%, transparent);
+}
+.trk-table td { text-align: center; vertical-align: middle; }
+.trk-table td:first-child { text-align: left; min-width: 150px; }
+.trk-total { min-width: 110px; }
+.trk-total b { font-size: 16px; }
+
+.tbar { height: 8px; border-radius: 99px; background: var(--tint); overflow: hidden; margin-top: 5px; min-width: 80px; }
+.tbar > i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #1f9d63, #2bb3c0); }
+
+.trk-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.trk-big b { font-size: 36px; letter-spacing: -.5px; line-height: 1; }
+.trk-big + .tbar { height: 12px; margin-top: 10px; }
+.trk-units { display: grid; gap: 10px; margin-top: 16px; }
+.trk-unitrow {
+  border: 1px solid color-mix(in srgb, var(--unit) 30%, var(--rule)); border-left: 5px solid var(--unit);
+  border-radius: 12px; padding: 10px 12px; background: color-mix(in srgb, var(--unit) 5%, var(--card));
+}
+.trk-unitrow .hd { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; font-weight: 800; color: var(--unit); }
+.trk-unitrow .hd span:last-child { white-space: nowrap; }
+.trk-unitrow .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.trk-chip {
+  flex: 1 1 170px; justify-content: space-between; gap: 10px; min-height: 46px; padding: 8px 12px;
+  font-size: 13.5px; text-align: left;
+}
+.trk-chip span { font-weight: 600; color: var(--text); }
+.trk-chip b { white-space: nowrap; font-size: 15px; }
