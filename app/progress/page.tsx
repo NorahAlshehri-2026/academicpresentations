@@ -5,6 +5,7 @@ import ProfileCards, { type ProfileSubmission } from "@/app/_components/ProfileC
 import { CRIT_CLASS, FOCUS, MAX_ATTEMPTS } from "@/app/_lib/activities";
 import { courseGrade } from "@/app/_lib/scores";
 import { StudentTracker, Legend } from "@/app/_components/ProgressTracker";
+import { studentDue } from "@/app/_lib/due";
 
 export default async function ProgressPage() {
   const profile = await currentProfile();
@@ -44,17 +45,27 @@ export default async function ProgressPage() {
 
   // the digital tracker: 10 points per activity, 100 in all
   const taskList = (tasks ?? []) as any[];
+  const { due } = await studentDue(supabase, profile.id);
+  const hasDue = Object.keys(due).length > 0;
   const grade = courseGrade(
     profile.id,
     taskList,
-    subs.map((s) => ({ id: s.id, student_id: profile.id, lesson_id: s.lesson_id, attempt_no: s.attempt_no })),
-    (marks ?? []) as any[]
+    subs.map((s) => ({ id: s.id, student_id: profile.id, lesson_id: s.lesson_id, attempt_no: s.attempt_no, created_at: s.created_at })),
+    (marks ?? []) as any[],
+    due
   );
   const tracker = taskList.length > 0 && (
     <div className="card">
       <div className="spread">
         <h3>Your points</h3>
-        <span className="pill">10 activities × 10 points = 100</span>
+        <div className="row" style={{ gap: 8 }}>
+          <span className="pill">10 activities × 10 points = 100</span>
+          {hasDue && (
+            <a className="btn sm act k-calendar" href="/calendar" title="Opens in Apple Calendar, Google Calendar, Outlook or any calendar app">
+              ⬇ Add my deadlines to calendar
+            </a>
+          )}
+        </div>
       </div>
       <p className="tiny muted" style={{ marginTop: 4 }}>
         Each activity is worth 10 points, worked out from your teacher&apos;s official mark out of 20 (16/20 = 8
