@@ -6,6 +6,7 @@ import { criterionAverages, weakest, courseGrade } from "@/app/_lib/scores";
 import { fmtDate } from "@/app/_lib/format";
 import { Radar, RADAR_LABELS } from "@/app/_components/Charts";
 import ClassLink from "@/app/_components/ClassLink";
+import AddStudent from "@/app/_components/AddStudent";
 import RemoveStudent from "@/app/_components/RemoveStudent";
 import DeleteSection from "@/app/_components/DeleteSection";
 
@@ -104,6 +105,15 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
             teacherName={profile.full_name}
           />
         )}
+        {(own || isAdmin) && (
+          <AddStudent
+            sectionId={sec.id}
+            courseTitle={sec.courses?.title ?? "The course"}
+            sectionNumber={String(sec.number)}
+            term={sec.term}
+            teacherName={sec.teacher?.full_name ?? profile.full_name}
+          />
+        )}
       </div>
 
       <div className="card">
@@ -144,7 +154,7 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
             </p>
           </>
         ) : (
-          <p className="small muted">Nobody has joined yet. Share the class link above.</p>
+          <p className="small muted">Nobody has joined yet. Share the class link or add students by email above.</p>
         )}
       </div>
 
