@@ -675,3 +675,26 @@ a.trk:hover, a.trk-chip:hover { filter: brightness(.95); text-decoration: none; 
 }
 .trk-chip span { font-weight: 600; color: var(--text); }
 .trk-chip b { white-space: nowrap; font-size: 15px; }
+
+/* ---------------------------------------------------------------------
+   Action buttons coloured by what they do (same colour everywhere):
+   <button class="btn sm act k-copy">. All are dark enough for white text.
+   --------------------------------------------------------------------- */
+.btn.act.k-gradebook { --act: #146b5b; }  /* open the gradebook: the main action */
+.btn.act.k-preview   { --act: #1f7fa8; }  /* see it as a student */
+.btn.act.k-course    { --act: #1d64b0; }  /* open a course */
+.btn.act.k-duplicate { --act: #6d43a8; }  /* make another section */
+.btn.act.k-copy      { --act: #0e7480; }  /* copy a link */
+.btn.act.k-announce  { --act: #9a5c06; }  /* copy a message to send */
+.btn.act.k-whatsapp  { --act: #18864a; }  /* share on WhatsApp */
+.btn.act.k-email     { --act: #b0306a; }  /* send by email */
+.btn.act.k-newlink   { --act: #5b6470; }  /* replace the class link */
+.btn.act.k-close     { --act: #c2492b; }  /* close the class to new students */
+.btn.act.k-reopen    { --act: #18864a; }  /* reopen it */
+.btn.act.k-add       { --act: #2f5fd0; }  /* add a student */
+.btn.act.k-excel     { --act: #1d7a45; }  /* download the Excel workbook */
+.btn.act:disabled { opacity: .6; }
+
+/* count pills on the class cards */
+.pill.p-joined { background: color-mix(in srgb, #2f5fd0 13%, var(--card)); color: color-mix(in srgb, #2f5fd0 85%, var(--text)); }
+.pill.p-marked { background: color-mix(in srgb, #1f9d63 15%, var(--card)); color: color-mix(in srgb, #1f9d63 80%, var(--text)); }
