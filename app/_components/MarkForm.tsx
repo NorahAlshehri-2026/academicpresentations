@@ -23,6 +23,10 @@ type Existing = {
  * In units 1–4 the teacher checks the task's lesson objectives instead, and
  * the mark out of 20 is worked out from them automatically (Yes = full credit,
  * Partly = half, Not yet = none). The final presentation uses the rubric.
+ *
+ * Either way the teacher or an administrator can also type the mark in by hand
+ * (a whole number from 0 to 20), which overrides the worked-out mark. A hand
+ * mark can be saved even if not every criterion or objective is filled in.
  */
 export default function MarkForm({
   submissionId,
@@ -49,14 +53,32 @@ export default function MarkForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const complete = objectives ? objectives.every((o) => checks[o]) : RUBRIC.every((c) => scores[c.id]);
-  const total = objectives
+  const filled = objectives ? objectives.every((o) => checks[o]) : RUBRIC.every((c) => scores[c.id]);
+  const worked = objectives
     ? objectivesTotal(objectives.map((o) => checks[o]))
     : RUBRIC.reduce((a, c) => a + (scores[c.id] ?? 0), 0);
 
+  // A mark already saved that differs from what the scores give was entered by hand.
+  const initialWorked = objectives
+    ? objectivesTotal(objectives.map((o) => Object.fromEntries(prior.checks)[o]))
+    : RUBRIC.reduce((a, c) => a + (Number(existing?.scores?.[c.id]) || 0), 0);
+  const [manual, setManual] = useState(alreadyMarked !== null && alreadyMarked !== initialWorked);
+  const [manualMark, setManualMark] = useState(alreadyMarked !== null ? String(alreadyMarked) : "");
+  const manualValue = manualMark.trim() === "" ? NaN : Number(manualMark);
+  const manualOk = Number.isInteger(manualValue) && manualValue >= 0 && manualValue <= 20;
+
+  const complete = manual ? manualOk : filled;
+  const total = manual ? (manualOk ? manualValue : 0) : worked;
+
   async function save() {
     if (!complete) {
-      setError(objectives ? "Choose Yes, Partly or Not yet for every objective." : "Score all five criteria to give a mark out of 20.");
+      setError(
+        manual
+          ? "Type a whole-number mark from 0 to 20."
+          : objectives
+            ? "Choose Yes, Partly or Not yet for every objective, or enter the mark by hand."
+            : "Score all five criteria to give a mark out of 20, or enter the mark by hand."
+      );
       return;
     }
     if (alreadyMarked !== null && alreadyMarked !== total && !reason.trim()) {
@@ -71,7 +93,10 @@ export default function MarkForm({
     const body = objectives
       ? {
           scores: null as any,
-          strengths: encodeObjectives(objectives.map((o) => [o, checks[o]] as [string, Rating]), strengths),
+          strengths: encodeObjectives(
+            objectives.filter((o) => checks[o]).map((o) => [o, checks[o]] as [string, Rating]),
+            strengths
+          ),
           improve: improve.trim() || null,
         }
       : { scores, strengths: strengths.trim() || null, improve: improve.trim() || null };
@@ -97,12 +122,12 @@ export default function MarkForm({
         submission_id: submissionId,
         marker_id: markerId,
         total,
-        per_criterion: (objectives ? null : scores) as Record<string, number> | null,
+        per_criterion: (objectives || !filled ? null : scores) as Record<string, number> | null,
         comment: comment || null,
         reason: alreadyMarked !== null ? reason.trim() : null,
       };
       let { error: g } = await supabase.from("grades").insert(grade);
-      if (g && objectives && /per_criterion|null value|check constraint/i.test(g.message)) {
+      if (g && grade.per_criterion === null && /per_criterion|null value|check constraint/i.test(g.message)) {
         ({ error: g } = await supabase.from("grades").insert({ ...grade, per_criterion: {} }));
       }
       if (g) {
@@ -143,6 +168,44 @@ export default function MarkForm({
           <ScorePicker scores={scores} onPick={(id, n) => setScores({ ...scores, [id]: n })} />
         </>
       )}
+
+      <div className="note" style={{ marginTop: 12 }}>
+        <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 600, cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={manual}
+            onChange={(e) => {
+              setManual(e.target.checked);
+              if (e.target.checked && manualMark.trim() === "" && filled) setManualMark(String(worked));
+              setError(null);
+            }}
+          />
+          Enter the mark by hand
+        </label>
+        {manual ? (
+          <div className="row" style={{ marginTop: 8, gap: 8, alignItems: "center" }}>
+            <input
+              id={`mm-${submissionId}`}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={20}
+              step={1}
+              value={manualMark}
+              onChange={(e) => setManualMark(e.target.value)}
+              aria-label="Mark out of 20"
+              style={{ width: 90 }}
+            />
+            <span className="small muted">
+              / 20{filled ? ` · the ${objectives ? "objectives" : "scores"} above give ${worked}` : ""}
+            </span>
+          </div>
+        ) : (
+          <p className="tiny muted" style={{ margin: "6px 0 0" }}>
+            Tick this to type a mark from 0 to 20 yourself. It replaces the worked-out mark in the gradebook.
+          </p>
+        )}
+      </div>
 
       <label className="fld" htmlFor={`ms-${submissionId}`}>What worked</label>
       <textarea id={`ms-${submissionId}`} value={strengths} onChange={(e) => setStrengths(e.target.value)} />
