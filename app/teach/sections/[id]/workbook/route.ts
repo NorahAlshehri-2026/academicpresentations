@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentProfile, serverClient } from "@/app/_lib/supabase";
 import { mmss } from "@/app/_lib/format";
-import { feedbackTotal, courseGrade } from "@/app/_lib/scores";
+import { feedbackTotal, courseGrade, ACTIVITY_POINTS } from "@/app/_lib/scores";
 import { buildXlsx, type Cell } from "@/app/_lib/xlsx";
 
 export const dynamic = "force-dynamic";
@@ -91,23 +91,20 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       myMarks.length,
       unmarked,
       mean,
+      `${g.done}/${g.of}`,
       `${g.marked}/${g.of}`,
       g.total,
       localDate(last),
     ];
   });
 
-  // 2. Marks by activity — the official mark (/20) of each student's latest marked
-  // attempt, then each unit out of 20 and the course total out of 100
+  // 2. Points by activity — 10 points per activity (official mark /20, halved),
+  // then each unit's subtotal and the course total out of 100
   const byTask: Cell[][] = students.map((st) => {
-    const cells: Cell[] = [st.full_name, st.email];
-    for (const t of taskList) {
-      const att = allSubs.filter((s) => s.student_id === st.id && s.lesson_id === t.id).sort((a, b) => b.attempt_no - a.attempt_no);
-      const marked = att.map((s) => markOf(s.id)).find(Boolean);
-      cells.push(marked ? Number(marked.total) : att.length ? "not marked" : "");
-    }
     const g = gradeOf(st.id);
-    g.units.forEach((u) => cells.push(u.mark));
+    const cells: Cell[] = [st.full_name, st.email];
+    g.activities.forEach((a) => cells.push(a.state === "marked" ? a.points : a.state === "recorded" ? "to mark" : ""));
+    g.units.forEach((u) => cells.push(u.points));
     cells.push(g.total);
     return cells;
   });
@@ -138,6 +135,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         s.duration_seconds != null ? mmss(s.duration_seconds) : "",
         t?.target_seconds != null ? mmss(t.target_seconds) : "",
         m ? Number(m.total) : null,
+        m ? round1((Math.max(0, Math.min(20, Number(m.total))) / 20) * ACTIVITY_POINTS) : null,
         m ? localDate(m.created_at) : null,
         m?.comment ?? "",
         fb.filter((f) => f.source === "peer").length,
@@ -154,7 +152,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     ["Practice tasks", taskList.length],
     ["Downloaded on", localDate(new Date().toISOString())],
     ["Downloaded by", profile.full_name],
-    ["Grading", `Each activity is marked out of 20. Each unit is worth 20: its mark is the average of its activities. The ${units.length} units add up to the total out of 100.`],
+    ["Grading", `Each of the ${taskList.length} activities is worth ${ACTIVITY_POINTS} points: its official mark out of 20, halved (16/20 = 8 points). Unit columns are subtotals. The activities add up to the total out of 100.`],
     ["Not yet marked", "An activity without an official mark counts as 0, so the total builds up over the term and is final once every activity is marked."],
     ["Note", "This file is a copy made when downloaded: the academy gradebook stays the official record."],
   ];
@@ -162,20 +160,26 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const bytes = buildXlsx([
     {
       name: "Summary",
-      header: ["Student", "Email", "Joined", "Attempts", "Tasks recorded", "Tasks in course", "Marked attempts", "Waiting for a mark", "Mean mark /20", "Activities marked", "Total /100", "Latest attempt"],
+      header: ["Student", "Email", "Joined", "Attempts", "Tasks recorded", "Tasks in course", "Marked attempts", "Waiting for a mark", "Mean mark /20", "Activities done", "Activities marked", "Total /100", "Latest attempt"],
       rows: summary,
     },
     {
-      name: "Marks by activity",
-      header: ["Student", "Email", ...taskList.map((t) => `${taskName(t)} /20`), ...units.map((u) => `Unit ${u} /20`), "Total /100"],
+      name: "Points by activity",
+      header: [
+        "Student",
+        "Email",
+        ...taskList.map((t) => `${taskName(t)} /${ACTIVITY_POINTS}`),
+        ...units.map((u) => `Unit ${u} /${taskList.filter((t) => t.unit === u).length * ACTIVITY_POINTS}`),
+        "Total /100",
+      ],
       rows: byTask,
       widths: [24, 30, ...taskList.map(() => 16), ...units.map(() => 10), 11],
     },
     {
       name: "All attempts",
-      header: ["Student", "Email", "Unit", "Task", "Attempt", "Recorded on", "Length", "Target", "Official mark /20", "Marked on", "Teacher comment", "Classmate feedback", "Feedback average /20"],
+      header: ["Student", "Email", "Unit", "Task", "Attempt", "Recorded on", "Length", "Target", "Official mark /20", "Points /10", "Marked on", "Teacher comment", "Classmate feedback", "Feedback average /20"],
       rows: attempts,
-      widths: [24, 30, 6, 30, 8, 13, 8, 8, 10, 13, 50, 10, 10],
+      widths: [24, 30, 6, 30, 8, 13, 8, 8, 10, 9, 13, 50, 10, 10],
     },
     { name: "About", header: ["Item", "Value"], rows: about, widths: [16, 70] },
   ]);
