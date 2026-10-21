@@ -15,6 +15,7 @@ import MediaPlayer from "@/app/_components/MediaPlayer";
 import FeedbackList, { type FeedbackRow } from "@/app/_components/FeedbackList";
 import { isVideoPath } from "@/app/_lib/format";
 import { PreviewBanner, SampleAttempt } from "@/app/_components/StudentPreview";
+import { loadDeadlines, dueState, fmtDue, relDue, TZ_LABEL } from "@/app/_lib/due";
 
 export default async function LessonPage({
   params,
@@ -186,6 +187,31 @@ export default async function LessonPage({
 
   const markFor = (id: string) => (marks ?? []).find((m: any) => m.submission_id === id) ?? null;
 
+  // the class's deadline for this activity, if the teacher set one
+  const { rows: dueRows } = sectionId ? await loadDeadlines(supabase, [sectionId]) : { rows: [] as any[] };
+  const deadline = (dueRows as any[]).find((d) => d.lesson_id === lesson.id) ?? null;
+  const dueSt = deadline ? dueState(deadline.due_at) : null;
+  const isLate = (s: any) => !!deadline && new Date(s.created_at).getTime() > new Date(deadline.due_at).getTime();
+  const dueBanner = deadline && (
+    <div className={`due-banner ${dueSt}`}>
+      <div>
+        <b>{dueSt === "past" ? "Deadline passed" : "Deadline"}: {fmtDue(deadline.due_at)}</b>
+        <span className="tiny" suppressHydrationWarning>
+          {" "}· {TZ_LABEL} · {relDue(deadline.due_at)}
+        </span>
+        {deadline.note && <div className="small" style={{ marginTop: 4 }}>{deadline.note}</div>}
+        {dueSt === "past" && (
+          <div className="small" style={{ marginTop: 4 }}>
+            You can still record. Your teacher will see the attempt marked <b>Late</b>.
+          </div>
+        )}
+      </div>
+      <a className="btn sm act k-calendar" href={`/calendar?section=${sectionId}&lesson=${lesson.id}`}>
+        ⬇ Add to calendar
+      </a>
+    </div>
+  );
+
   const { data: classmatesRaw } = sectionId
     ? await supabase.rpc("classmates_in_section", { section: sectionId })
     : { data: [] as any[] };
@@ -220,6 +246,7 @@ export default async function LessonPage({
     <>
       {staff && <PreviewBanner saving={!previewOnly} />}
       {header}
+      {dueBanner}
       {mediaCards}
 
       {previewOnly ? (
@@ -272,7 +299,10 @@ export default async function LessonPage({
           <div className="card" key={s.id} id={`attempt-${s.attempt_no}`}>
             <div className="spread">
               <h3>Attempt {s.attempt_no}</h3>
-              <span className={`pill ${isFinal ? "c3" : "c5"}`}>{isFinal ? "Final" : "Attempt 1"}</span>
+              <span className="row" style={{ gap: 6 }}>
+                {isLate(s) && <span className="pill late-pill">Late</span>}
+                <span className={`pill ${isFinal ? "c3" : "c5"}`}>{isFinal ? "Final" : "Attempt 1"}</span>
+              </span>
             </div>
             <div className="meta">
               {mmss(s.duration_seconds)} of {mmss(target)} · {fmtDate(s.created_at)}
