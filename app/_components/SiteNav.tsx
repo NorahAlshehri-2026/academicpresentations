@@ -4,7 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Role } from "@/app/_lib/types";
 
-type Item = [href: string, label: string, cta?: boolean];
+/**
+ * Each tab carries its own colour by what it is for (see .sitenav [data-tone]
+ * in globals.css):
+ *   home      white      the start page
+ *   guide     sky blue   help
+ *   learn     cyan       reading: units, courses
+ *   practice  orange     speaking activities
+ *   record    violet     my recordings
+ *   share     pink       shared with me
+ *   assess    yellow     the rubric
+ *   teach     periwinkle my classes
+ *   admin     coral      academy administration
+ *   progress  green      my progress (an action item, always filled)
+ */
+type Tone = "home" | "guide" | "learn" | "practice" | "record" | "share" | "assess" | "teach" | "admin" | "progress";
+type Item = [href: string, label: string, tone: Tone, cta?: boolean];
 
 /**
  * The header links, laid out like the original practice studio:
@@ -16,22 +31,28 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
 
   let items: Item[];
   if (!role) {
-    items = [["/", "Home"], ["/guide", "Guide"], ["/courses", "Courses"], ["/rubric", "Rubric"]];
+    items = [["/", "Home", "home"], ["/guide", "Guide", "guide"], ["/courses", "Courses", "learn"], ["/rubric", "Rubric", "assess"]];
   } else if (role === "student") {
     items = [
-      ["/", "Home"],
-      ["/guide", "Guide"],
-      ["/units", "Units"],
-      ["/activities", "Activities"],
-      ["/recordings", "My recordings"],
-      ["/shared", "Shared with me"],
-      ["/rubric", "Rubric"],
-      ["/progress", "My progress", true],
+      ["/", "Home", "home"],
+      ["/guide", "Guide", "guide"],
+      ["/units", "Units", "learn"],
+      ["/activities", "Activities", "practice"],
+      ["/recordings", "My recordings", "record"],
+      ["/shared", "Shared with me", "share"],
+      ["/rubric", "Rubric", "assess"],
+      ["/progress", "My progress", "progress", true],
     ];
   } else {
-    items = [["/", "Home"], ["/guide", "Guide"], ["/units", "Units"], ["/activities", "Activities"], ["/teach", "My classes"]];
-    if (role === "admin") items.push(["/admin", isOwner ? "Admin" : "Academy"]);
-    items.push(["/rubric", "Rubric"]);
+    items = [
+      ["/", "Home", "home"],
+      ["/guide", "Guide", "guide"],
+      ["/units", "Units", "learn"],
+      ["/activities", "Activities", "practice"],
+      ["/teach", "My classes", "teach"],
+    ];
+    if (role === "admin") items.push(["/admin", isOwner ? "Admin" : "Academy", "admin"]);
+    items.push(["/rubric", "Rubric", "assess"]);
   }
 
   const current = (href: string) =>
@@ -45,17 +66,23 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
 
   return (
     <nav className="sitenav">
-      {items.map(([href, label, cta]) => (
-        <Link key={href} href={href} className={cta ? "cta" : undefined} aria-current={current(href) ? "page" : undefined}>
+      {items.map(([href, label, tone, cta]) => (
+        <Link
+          key={href}
+          href={href}
+          data-tone={tone}
+          className={cta ? "cta" : undefined}
+          aria-current={current(href) ? "page" : undefined}
+        >
           {label}
         </Link>
       ))}
       {role ? (
         <form action="/auth/signout" method="post">
-          <button type="submit" className={role === "student" ? undefined : "cta-out"}>Sign out</button>
+          <button type="submit" className="cta-out">Sign out</button>
         </form>
       ) : (
-        <Link href="/login" className="cta">Sign in</Link>
+        <Link href="/login" className="cta" data-tone="progress">Sign in</Link>
       )}
     </nav>
   );
