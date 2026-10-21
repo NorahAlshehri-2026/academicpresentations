@@ -3,6 +3,7 @@ import { currentProfile, serverClient } from "@/app/_lib/supabase";
 import { mmss } from "@/app/_lib/format";
 import { feedbackTotal, courseGrade, ACTIVITY_POINTS } from "@/app/_lib/scores";
 import { buildXlsx, type Cell } from "@/app/_lib/xlsx";
+import { loadDeadlines } from "@/app/_lib/due";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const markOf = (subId: string) => allMarks.find((m) => m.submission_id === subId) ?? null;
   const taskName = (t: any) => (t.unit != null ? `U${t.unit} · ${t.title}` : t.title);
   const units = Array.from(new Set(taskList.map((t) => t.unit))).sort((a, b) => a - b);
-  const gradeOf = (studentId: string) => courseGrade(studentId, taskList, allSubs, allMarks);
+  const { rows: deadlines } = await loadDeadlines(supabase, [sec.id]);
+  const due = Object.fromEntries(deadlines.map((d) => [d.lesson_id, d.due_at]));
+  const gradeOf = (studentId: string) => courseGrade(studentId, taskList, allSubs, allMarks, due);
 
   // 1. Summary — one row per student, as on the gradebook page
   const summary: Cell[][] = students.map((st) => {
@@ -140,6 +143,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         m?.comment ?? "",
         fb.filter((f) => f.source === "peer").length,
         feedbackTotal(fb),
+        due[s.lesson_id] ? localDate(due[s.lesson_id]) : null,
+        due[s.lesson_id] ? (new Date(s.created_at).getTime() > new Date(due[s.lesson_id]).getTime() ? "Late" : "On time") : "",
       ];
     });
 
@@ -177,9 +182,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     },
     {
       name: "All attempts",
-      header: ["Student", "Email", "Unit", "Task", "Attempt", "Recorded on", "Length", "Target", "Official mark /20", "Points /10", "Marked on", "Teacher comment", "Classmate feedback", "Feedback average /20"],
+      header: ["Student", "Email", "Unit", "Task", "Attempt", "Recorded on", "Length", "Target", "Official mark /20", "Points /10", "Marked on", "Teacher comment", "Classmate feedback", "Feedback average /20", "Deadline", "On time / Late"],
       rows: attempts,
-      widths: [24, 30, 6, 30, 8, 13, 8, 8, 10, 9, 13, 50, 10, 10],
+      widths: [24, 30, 6, 30, 8, 13, 8, 8, 10, 9, 13, 50, 10, 10, 13, 12],
     },
     { name: "About", header: ["Item", "Value"], rows: about, widths: [16, 70] },
   ]);
