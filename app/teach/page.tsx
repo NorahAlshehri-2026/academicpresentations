@@ -50,7 +50,7 @@ export default async function TeacherDashboard() {
           <h3>My courses</h3>
           <div className="row" style={{ marginTop: 10 }}>
             {courses.map((c: any) => (
-              <Link key={c.id} className="btn ghost" href={`/learn/${c.id}`}>
+              <Link key={c.id} className="btn act k-course" href={`/learn/${c.id}`}>
                 {c.title} {c.published ? "" : "· draft"}
               </Link>
             ))}
@@ -71,21 +71,21 @@ export default async function TeacherDashboard() {
             </div>
 
             <div className="row" style={{ marginTop: 8 }}>
-              <span className="pill">
+              <span className="pill p-joined">
                 {members.length} joined
               </span>
-              <span className="pill">{rows.length} marked</span>
+              <span className="pill p-marked">{rows.length} marked</span>
               <Link
-                className="btn ghost sm"
+                className="btn sm act k-duplicate"
                 href={`/teach/sections/new?course=${s.courses?.id ?? ""}&term=${encodeURIComponent(s.term)}`}
                 style={{ marginLeft: "auto" }}
               >
                 Duplicate for another section
               </Link>
-              <Link className="btn ghost sm" href={`/learn/${s.courses?.id ?? ""}`}>
+              <Link className="btn sm act k-preview" href={`/learn/${s.courses?.id ?? ""}`}>
                 Student preview
               </Link>
-              <Link className="btn ghost sm" href={`/teach/sections/${s.id}`}>
+              <Link className="btn sm act k-gradebook" href={`/teach/sections/${s.id}`}>
                 Open gradebook
               </Link>
             </div>
