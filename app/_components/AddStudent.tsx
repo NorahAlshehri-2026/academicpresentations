@@ -108,7 +108,7 @@ export default function AddStudent({
               autoComplete="off"
             />
           </div>
-          <button className="btn sm" disabled={busy} style={{ flex: "0 0 auto" }}>
+          <button className="btn sm act k-add" disabled={busy} style={{ flex: "0 0 auto" }}>
             {busy ? "Adding…" : "Add student"}
           </button>
         </div>
@@ -134,20 +134,20 @@ export default function AddStudent({
                 style={{ marginTop: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }}
               />
               <div className="row" style={{ marginTop: 8 }}>
-                <button type="button" className="btn sm" onClick={() => copy("link")}>
+                <button type="button" className="btn sm act k-copy" onClick={() => copy("link")}>
                   {copied === "link" ? "Copied" : "Copy link"}
                 </button>
-                <button type="button" className="btn ghost sm" onClick={() => copy("message")}>
+                <button type="button" className="btn sm act k-announce" onClick={() => copy("message")}>
                   {copied === "message" ? "Copied" : "Copy message"}
                 </button>
                 <a
-                  className="btn ghost sm"
+                  className="btn sm act k-email"
                   href={`mailto:${encodeURIComponent(result.email)}?subject=${encodeURIComponent(`${courseTitle}: your account`)}&body=${encodeURIComponent(message)}`}
                 >
                   Email it
                 </a>
                 <a
-                  className="btn ghost sm"
+                  className="btn sm act k-whatsapp"
                   target="_blank"
                   rel="noopener noreferrer"
                   href={`https://wa.me/?text=${encodeURIComponent(message)}`}
