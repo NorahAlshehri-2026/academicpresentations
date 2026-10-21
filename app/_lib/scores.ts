@@ -45,34 +45,68 @@ type Task = { id: string; unit: number };
 type Attempt = { id: string; student_id: string; lesson_id: string; attempt_no: number };
 type Mark = { submission_id: string; total: number | string };
 
+/** Each speaking activity is worth this many points; ten activities make 100. */
+export const ACTIVITY_POINTS = 10;
+
+/** Where a student is with one activity: not started, recorded but not marked, or marked. */
+export type ActivityState = "none" | "recorded" | "marked";
+
 /**
- * The course grade out of 100: each unit is worth 20, and a unit's mark out of
- * 20 is the average of its activities' official marks. An activity counts
- * with the mark of its latest marked attempt; an activity not yet marked
- * counts as 0, so the total builds up over the term and is final once every
- * activity is marked. (With other than five units, the total is scaled to 100.)
+ * The course grade out of 100: each activity is worth 10 points, worked out
+ * from its official mark out of 20 (16/20 = 8 points). An activity counts with
+ * the mark of its latest marked attempt; an activity not yet marked counts as
+ * 0, so the total builds up over the term and is final once every activity is
+ * marked. Units are shown as subtotals (a unit with three activities is worth
+ * 30). With other than ten activities, the total is scaled to 100.
  */
 export function courseGrade(studentId: string, tasks: Task[], attempts: Attempt[], marks: Mark[]) {
   const markOf = (subId: string) => marks.find((m) => m.submission_id === subId);
-  const units = Array.from(new Set(tasks.map((t) => t.unit))).sort((a, b) => a - b);
-  const activity = (taskId: string): number | null => {
-    const latest = attempts
-      .filter((s) => s.student_id === studentId && s.lesson_id === taskId)
-      .sort((a, b) => b.attempt_no - a.attempt_no)
-      .map((s) => markOf(s.id))
-      .find(Boolean);
-    return latest ? Number(latest.total) : null;
-  };
   const r1 = (n: number) => Math.round(n * 10) / 10;
-  const byUnit = units.map((u) => {
-    const ts = tasks.filter((t) => t.unit === u);
-    const got = ts.map((t) => activity(t.id));
-    const marked = got.filter((n) => n !== null).length;
-    const sum = got.reduce<number>((a, n) => a + (n ?? 0), 0);
-    return { unit: u, mark: ts.length ? r1(sum / ts.length) : 0, marked, of: ts.length };
+
+  const activities = tasks.map((t) => {
+    const mine = attempts
+      .filter((s) => s.student_id === studentId && s.lesson_id === t.id)
+      .sort((a, b) => b.attempt_no - a.attempt_no);
+    const m = mine.map((s) => markOf(s.id)).find(Boolean);
+    const mark = m ? Number(m.total) : null;
+    const points = mark === null ? null : r1((Math.max(0, Math.min(20, mark)) / 20) * ACTIVITY_POINTS);
+    const state: ActivityState = mark !== null ? "marked" : mine.length ? "recorded" : "none";
+    return {
+      taskId: t.id,
+      unit: t.unit,
+      attempts: mine.length,
+      latestId: mine[0]?.id ?? null,
+      // a newer attempt is waiting for a mark
+      pending: !!mine[0] && !markOf(mine[0].id),
+      mark,
+      points,
+      state,
+    };
   });
-  const raw = byUnit.reduce((a, u) => a + u.mark, 0);
-  const total = units.length ? r1((raw / (units.length * 20)) * 100) : 0;
-  const markedAll = byUnit.reduce((a, u) => a + u.marked, 0);
-  return { units: byUnit, total, marked: markedAll, of: tasks.length };
+
+  const units = Array.from(new Set(tasks.map((t) => t.unit)))
+    .sort((a, b) => a - b)
+    .map((u) => {
+      const acts = activities.filter((a) => a.unit === u);
+      return {
+        unit: u,
+        points: r1(acts.reduce((s, a) => s + (a.points ?? 0), 0)),
+        max: acts.length * ACTIVITY_POINTS,
+        marked: acts.filter((a) => a.state === "marked").length,
+        of: acts.length,
+      };
+    });
+
+  const earned = r1(activities.reduce((s, a) => s + (a.points ?? 0), 0));
+  const max = tasks.length * ACTIVITY_POINTS;
+  return {
+    activities,
+    units,
+    earned,
+    max,
+    total: max ? r1((earned / max) * 100) : 0,
+    marked: activities.filter((a) => a.state === "marked").length,
+    done: activities.filter((a) => a.state !== "none").length,
+    of: tasks.length,
+  };
 }
