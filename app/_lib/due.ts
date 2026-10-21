@@ -32,13 +32,23 @@ export async function studentDue(supabase: any, studentId: string) {
   const { rows, missing } = await loadDeadlines(supabase, ids);
   const due: Record<string, string> = {};
   const note: Record<string, string | null> = {};
+  const section: Record<string, string> = {};
   for (const r of rows) {
     if (!due[r.lesson_id] || r.due_at < due[r.lesson_id]) {
       due[r.lesson_id] = r.due_at;
       note[r.lesson_id] = r.note;
+      section[r.lesson_id] = r.section_id;
     }
   }
-  return { due, note, sectionIds: ids, missing };
+  return { due, note, section, sectionIds: ids, missing };
+}
+
+/** "Due today", "Due tomorrow" or "Due Thu 30 Oct", by the Riyadh calendar. */
+export function dueDayWord(iso: string, now = Date.now()) {
+  const a = riyadhParts(new Date(now));
+  const b = riyadhParts(new Date(iso));
+  const days = Math.round((Date.UTC(b.y, b.m, b.d) - Date.UTC(a.y, a.m, a.d)) / 86400000);
+  return days === 0 ? "Due today" : days === 1 ? "Due tomorrow" : `Due ${fmtDueDay(iso)}`;
 }
 
 /** Riyadh wall-clock parts of an instant (month is 0-based, dow 0 = Sunday). */
