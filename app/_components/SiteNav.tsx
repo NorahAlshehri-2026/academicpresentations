@@ -9,7 +9,7 @@ import type { Role } from "@/app/_lib/types";
  * in globals.css):
  *   home      white      the start page
  *   guide     sky blue   help
- *   learn     cyan       reading: units, courses
+ *   learn     cyan       reading: units, coursebook, courses
  *   practice  orange     speaking activities
  *   record    violet     my recordings
  *   share     pink       shared with me
@@ -23,7 +23,7 @@ type Item = [href: string, label: string, tone: Tone, cta?: boolean];
 
 /**
  * The header links, laid out like the original practice studio:
- * Home · Guide · Units · Activities · My recordings · Shared with me · Rubric · My progress.
+ * Home · Guide · Units · Coursebook · Activities · My recordings · Shared with me · Rubric · My progress.
  * Staff get the same course pages (as a student preview) plus their own.
  */
 export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?: boolean }) {
@@ -37,6 +37,7 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
       ["/", "Home", "home"],
       ["/guide", "Guide", "guide"],
       ["/units", "Units", "learn"],
+      ["/coursebook", "Coursebook", "learn"],
       ["/activities", "Activities", "practice"],
       ["/recordings", "My recordings", "record"],
       ["/shared", "Shared with me", "share"],
@@ -48,6 +49,7 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
       ["/", "Home", "home"],
       ["/guide", "Guide", "guide"],
       ["/units", "Units", "learn"],
+      ["/coursebook", "Coursebook", "learn"],
       ["/activities", "Activities", "practice"],
       ["/teach", "My classes", "teach"],
     ];
