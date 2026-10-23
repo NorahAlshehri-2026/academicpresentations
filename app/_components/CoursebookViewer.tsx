@@ -186,7 +186,7 @@ export default function CoursebookViewer({ book, startPage }: { book: CbManifest
           )}
         </div>
         <p className="tiny muted cb-hint">
-          Press <span className="cb-hint-dot"><PlayIcon /></span> on a gold <b>Track</b> label to play the recording for that exercise.
+          Press <span className="cb-hint-dot"><PlayIcon /></span> next to a listening exercise to play its recording.
         </p>
       </div>
 
