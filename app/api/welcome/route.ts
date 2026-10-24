@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/app/_lib/supabase";
 import { checkSetupToken } from "@/app/_lib/setup-link";
+import { termsRecord } from "@/app/_lib/terms";
 
 const MIN_PASSWORD = 8;
 
@@ -13,6 +14,10 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const token = String(body?.token ?? "");
   const password = String(body?.password ?? "");
+
+  if (body?.agreed !== true) {
+    return NextResponse.json({ error: "Tick the box to accept the terms of use." }, { status: 400 });
+  }
 
   if (password.length < MIN_PASSWORD) {
     return NextResponse.json({ error: `Please choose a password of at least ${MIN_PASSWORD} characters.` }, { status: 400 });
@@ -36,7 +41,7 @@ export async function POST(request: Request) {
 
   const { error } = await adminClient().auth.admin.updateUserById(check.user.id, {
     password,
-    app_metadata: { setup: null },
+    app_metadata: { setup: null, terms: termsRecord() }, // terms accepted on the form
   });
   if (error) {
     console.error("welcome: set password", error);
