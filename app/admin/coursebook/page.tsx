@@ -5,6 +5,8 @@ import { loadCourse } from "@/app/_lib/course";
 import { latestCoursebook } from "@/app/_lib/coursebook";
 import { versionDate } from "@/app/_lib/coursebook-types";
 import CoursebookUpload from "@/app/_components/CoursebookUpload";
+import AnswerKeyUpload from "@/app/_components/AnswerKeyUpload";
+import { loadAnswerKey } from "@/app/_lib/answer-key";
 
 export default async function CoursebookAdmin() {
   const profile = await currentProfile();
@@ -13,6 +15,7 @@ export default async function CoursebookAdmin() {
 
   const { course } = await loadCourse();
   const live = course ? await latestCoursebook(course.id) : null;
+  const answers = course ? await loadAnswerKey(course.id) : null;
   const when = live ? versionDate(live.version) : null;
 
   return (
@@ -45,6 +48,8 @@ export default async function CoursebookAdmin() {
       </div>
 
       {course && <CoursebookUpload courseId={course.id} />}
+
+      {course && <AnswerKeyUpload count={answers?.items.length ?? 0} updated={answers?.updated ?? null} />}
 
       <p className="small">
         <Link href="/admin">Back to Admin</Link>
