@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CbBox, CbManifest } from "@/app/_lib/coursebook-types";
+import type { CbAnswer, CbBox, CbManifest } from "@/app/_lib/coursebook-types";
+import "./coursebook-answers.css";
 
 const RATES = [1, 0.75];
 
@@ -35,7 +36,21 @@ const PauseIcon = () => (
  * button; the contents and page references jump to their page. One recording
  * plays at a time, in the player bar at the foot of the screen.
  */
-export default function CoursebookViewer({ book, startPage }: { book: CbManifest; startPage?: number }) {
+/** "**word**" → <b>word</b>; line breaks are kept by the panel's CSS */
+function Rich({ text }: { text: string }) {
+  return <>{text.split("**").map((part, i) => (i % 2 ? <b key={i}>{part}</b> : <span key={i}>{part}</span>))}</>;
+}
+
+export default function CoursebookViewer({
+  book,
+  startPage,
+  answers = [],
+}: {
+  book: CbManifest;
+  startPage?: number;
+  /** teachers and administrators only; always empty for students */
+  answers?: CbAnswer[];
+}) {
   const total = book.pages.length;
   const audio = useRef<HTMLAudioElement | null>(null);
   const rateRef = useRef(RATES[0]);
@@ -47,6 +62,8 @@ export default function CoursebookViewer({ book, startPage }: { book: CbManifest
   const [failed, setFailed] = useState(false);
   const [page, setPage] = useState(startPage ?? 1);
   const [jump, setJump] = useState("");
+  const [showKey, setShowKey] = useState(true);
+  const [openAns, setOpenAns] = useState<string | null>(null);
 
   const go = useCallback((n: number | null | undefined, smooth = true) => {
     if (!n) return;
@@ -179,6 +196,19 @@ export default function CoursebookViewer({ book, startPage }: { book: CbManifest
             />
             <span className="muted">of {total}</span>
           </form>
+          {answers.length > 0 && (
+            <button
+              type="button"
+              className="cb-chip cb-keychip"
+              aria-pressed={showKey}
+              onClick={() => {
+                setShowKey((v) => !v);
+                setOpenAns(null);
+              }}
+            >
+              Answer key: {showKey ? "on" : "off"}
+            </button>
+          )}
           {book.pdf && (
             <a className="btn ghost sm" href={book.pdf} target="_blank" rel="noopener">
               Download PDF
@@ -188,6 +218,12 @@ export default function CoursebookViewer({ book, startPage }: { book: CbManifest
         <p className="tiny muted cb-hint">
           Press <span className="cb-hint-dot"><PlayIcon /></span> next to a listening exercise to play its recording.
         </p>
+        {answers.length > 0 && showKey && (
+          <p className="tiny muted cb-hint">
+            Teachers only: press <span className="cb-ans-dot">A</span> beside an exercise number to see its answer. Students
+            never see these.
+          </p>
+        )}
       </div>
 
       <div className="cb-pages">
@@ -228,6 +264,47 @@ export default function CoursebookViewer({ book, startPage }: { book: CbManifest
                 </button>
               );
             })}
+            {showKey &&
+              answers
+                .filter((x) => x.page === p.n)
+                .map((x) => {
+                  const k = `${x.page}:${x.ex}`;
+                  const open = openAns === k;
+                  const [l, t, , h] = x.box;
+                  const below = t < 0.62;
+                  return (
+                    <div key={`a${k}`}>
+                      <button
+                        type="button"
+                        className={`cb-ans${open ? " is-open" : ""}`}
+                        style={{ left: pct(Math.max(0.004, l - 0.048)), top: pct(t), width: pct(0.039), height: pct(h) }}
+                        aria-expanded={open}
+                        aria-label={`${open ? "Hide" : "Show"} the answer to exercise ${x.ex}`}
+                        onClick={() => setOpenAns(open ? null : k)}
+                      >
+                        A
+                      </button>
+                      {open && (
+                        <div
+                          className="cb-ans-panel"
+                          role="region"
+                          aria-label={`Answer to exercise ${x.ex}`}
+                          style={below ? { top: pct(t + h + 0.008) } : { bottom: pct(1 - t + 0.008) }}
+                        >
+                          <div className="cb-ans-head">
+                            <b>Answer · {x.ex}</b>
+                            <button type="button" onClick={() => setOpenAns(null)} aria-label="Close the answer">
+                              ✕
+                            </button>
+                          </div>
+                          <div className="cb-ans-body">
+                            <Rich text={x.answer} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
           </section>
         ))}
       </div>
