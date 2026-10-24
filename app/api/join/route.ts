@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "@/app/_lib/supabase";
+import { termsRecord } from "@/app/_lib/terms";
 
 /**
  * Creates a student account from a class link and enrols it in that section.
@@ -32,7 +33,11 @@ export async function POST(request: Request) {
   const fullName = String(body?.fullName ?? "").trim();
   const email = String(body?.email ?? "").trim().toLowerCase();
   const password = String(body?.password ?? "");
+  const agreed = body?.agreed === true;
 
+  if (!agreed) {
+    return NextResponse.json({ error: "Tick the box to accept the terms of use." }, { status: 400 });
+  }
   if (!code) {
     return NextResponse.json({ error: "That link is missing its class code." }, { status: 400 });
   }
@@ -125,6 +130,7 @@ export async function POST(request: Request) {
     password,
     email_confirm: true, // the class link is the invitation; no confirmation email
     user_metadata: { full_name: fullName },
+    app_metadata: { terms: termsRecord() }, // accepted on the sign-up form
   });
 
   if (createError || !created?.user) {
