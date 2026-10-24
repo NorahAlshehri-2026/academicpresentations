@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { browserClient } from "@/app/_lib/supabase-browser";
+import { TermsAgree } from "./TermsText";
 
 /**
  * The form a student sees when they open a class link and have no account yet.
@@ -17,12 +18,17 @@ export default function JoinSignup({ code }: { code: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offerSignIn, setOfferSignIn] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!agreed) {
+      setError("Tick the box to accept the terms of use.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setOfferSignIn(false);
@@ -32,7 +38,7 @@ export default function JoinSignup({ code }: { code: string }) {
       const res = await fetch("/api/join", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code, fullName, email, password }),
+        body: JSON.stringify({ code, fullName, email, password, agreed }),
       });
       data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -108,6 +114,8 @@ export default function JoinSignup({ code }: { code: string }) {
         them somewhere safe.
       </p>
 
+      <TermsAgree id="jt" checked={agreed} onChange={setAgreed} />
+
       {error && (
         <div className="err" style={{ marginTop: 12 }}>
           {error}
@@ -122,7 +130,7 @@ export default function JoinSignup({ code }: { code: string }) {
         </div>
       )}
 
-      <button className="btn gold block" style={{ marginTop: 16 }} disabled={busy}>
+      <button className="btn gold block" style={{ marginTop: 16 }} disabled={busy || !agreed}>
         {busy ? "Setting up your account…" : "Create my account and join"}
       </button>
 
