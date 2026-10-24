@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasAcceptedTerms } from "@/app/_lib/terms";
 
 /**
  * Refreshes the session on every request and keeps signed-out visitors out of
@@ -42,6 +43,29 @@ export async function middleware(request: NextRequest) {
     url.pathname = "/login";
     url.searchParams.set("next", path);
     return NextResponse.redirect(url);
+  }
+
+  // Terms of use: a student who has not accepted the current version sees
+  // nothing of the course until they do. These pages stay open so they can
+  // read the terms, sign in or out, and finish joining a class. Teachers and
+  // administrators are not asked.
+  const openWithoutTerms = ["/agreement", "/guide", "/login", "/auth", "/join", "/welcome", "/invite", "/api", "/calendar"];
+  if (
+    user &&
+    !hasAcceptedTerms(user.app_metadata) &&
+    !openWithoutTerms.some((p) => path === p || path.startsWith(p + "/"))
+  ) {
+    const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    if (me?.role === "student") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/agreement";
+      url.search = "";
+      url.searchParams.set("next", path + request.nextUrl.search);
+      const redirect = NextResponse.redirect(url);
+      // keep any refreshed sign-in cookies
+      response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+      return redirect;
+    }
   }
 
   return response;
