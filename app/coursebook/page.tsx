@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { currentProfile } from "@/app/_lib/supabase";
 import { loadCourse } from "@/app/_lib/course";
 import { signedCoursebook } from "@/app/_lib/coursebook";
+import { loadAnswerKey } from "@/app/_lib/answer-key";
 import CoursebookViewer from "@/app/_components/CoursebookViewer";
 
 /**
@@ -39,6 +40,8 @@ export default async function CoursebookPage({ searchParams }: { searchParams?: 
   }
 
   const { book } = found;
+  // teachers and administrators only: the answer key never reaches a student's browser
+  const answers = profile.role === "student" ? [] : (await loadAnswerKey(course.id))?.items ?? [];
   const total = book.pages.length;
   const num = (v?: string) => {
     const n = parseInt(v ?? "", 10);
@@ -63,7 +66,7 @@ export default async function CoursebookPage({ searchParams }: { searchParams?: 
           )}
         </p>
       </div>
-      <CoursebookViewer book={book} startPage={startPage} />
+      <CoursebookViewer book={book} startPage={startPage} answers={answers} />
     </>
   );
 }
