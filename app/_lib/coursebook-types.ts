@@ -51,3 +51,11 @@ export function versionDate(v: string): Date | null {
   const x = /^v(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/.exec(v);
   return x ? new Date(Date.UTC(+x[1], +x[2] - 1, +x[3], +x[4], +x[5], +x[6])) : null;
 }
+
+/**
+ * The answer key: one entry per exercise, shown to teachers and administrators
+ * only, behind a button beside the exercise number. `box` is where the printed
+ * exercise number sits on the page. **text** in an answer is shown in bold.
+ */
+export type CbAnswer = { page: number; ex: string; box: CbBox; answer: string };
+export type CbAnswerKey = { version: 1; updated: string; items: CbAnswer[] };
