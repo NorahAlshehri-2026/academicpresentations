@@ -1,3 +1,5 @@
+import { TermsText } from "@/app/_components/TermsText";
+
 export const metadata = { title: "Guide · Academic Presentations" };
 
 export default function GuidePage() {
@@ -73,6 +75,14 @@ export default function GuidePage() {
           <li style={{ marginBottom: 6 }}><b>Transcript stays empty:</b> speech-to-text runs in Chrome. Elsewhere, type what you said.</li>
           <li><b>The link says it does not work:</b> your teacher may have made a new one. Ask for the current link.</li>
         </ul>
+      </div>
+
+      <div className="card" id="terms" style={{ scrollMarginTop: 90 }}>
+        <h3>Terms of use</h3>
+        <p className="small muted" style={{ margin: "4px 0 0" }}>
+          Students accept these when they create their account, and cannot open the course until they have.
+        </p>
+        <TermsText />
       </div>
     </>
   );
