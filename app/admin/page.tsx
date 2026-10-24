@@ -47,6 +47,7 @@ export default async function AdminDashboard() {
         </div>
         <div className="row" style={{ marginTop: 10 }}>
           <Link className="btn ghost sm" href="/courses">Student preview of the course</Link>
+          <Link className="btn ghost sm" href="/admin/coursebook">Coursebook files</Link>
         </div>
         <p className="tiny muted" style={{ marginTop: 10 }}>
           Students join with a class link, which every teacher shares from <b>My classes</b>. Teachers and
