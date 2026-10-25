@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}</style>
+<title>Upheld or Broken?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a case-file desk. Case tabs across the top, the active case file in the main column, the SPE code as a reference rail beside it (stacked below on phones). */
+:root {
+  --bg: #f3f5f6;
+  --paper: #ffffff;
+  --ink: #17232b;
+  --muted: #5a6b75;
+  --line: #d3dce1;
+  --petrol: #0f4c5c;
+  --petrol-soft: #e1edf0;
+  --amber: #b86e00;
+  --amber-soft: #fbefd9;
+  --up: #1f7a4d;
+  --up-soft: #dff1e7;
+  --br: #b3261e;
+  --br-soft: #fbe3e1;
+  --display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --paper: #16222a; --ink: #e4ecef; --muted: #98aab3; --line: #2a3a44;
+    --petrol: #7cc3d4; --petrol-soft: #1b3440; --amber: #f0b45c; --amber-soft: #3a2c14;
+    --up: #6fd29c; --up-soft: #173528; --br: #f28b82; --br-soft: #3d1d1b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --paper: #16222a; --ink: #e4ecef; --muted: #98aab3; --line: #2a3a44;
+  --petrol: #7cc3d4; --petrol-soft: #1b3440; --amber: #f0b45c; --amber-soft: #3a2c14;
+  --up: #6fd29c; --up-soft: #173528; --br: #f28b82; --br-soft: #3d1d1b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); font-weight: 700; }
+h1 { font-family: var(--display); font-size: clamp(28px, 4.5vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 68ch; }
+.steps { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 6px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--muted); }
+.steps b { color: var(--ink); }
+
+/* case tabs */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab {
+  font: 600 14px var(--body); color: var(--ink); background: var(--paper); border: 1px solid var(--line);
+  border-radius: 6px; padding: 7px 12px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center;
+}
+.tab .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.tab[aria-selected="true"] { background: var(--petrol); border-color: var(--petrol); color: var(--paper); }
+.tab[aria-selected="true"] .n { color: var(--paper); opacity: .8; }
+.tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.tab.done .dot { background: var(--up); }
+.tab.debate { border-style: dashed; }
+.tab:focus-visible, button:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.score { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--muted); align-self: center; font-variant-numeric: tabular-nums; }
+
+.desk { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .desk { grid-template-columns: minmax(0, 1fr); } }
+
+/* case file */
+.file { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.file-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 14px 20px; background: var(--petrol-soft); border-bottom: 1px solid var(--line); }
+.file-head .ref { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--petrol); font-weight: 700; }
+.file-head .who { font-size: 13px; color: var(--muted); }
+.file-body { padding: 20px; display: grid; gap: 18px; }
+h2 { font-family: var(--display); font-size: 26px; line-height: 1.2; margin: 0; text-wrap: balance; }
+.scenario { margin: 0; max-width: 68ch; font-size: 17px; }
+.question { margin: 0; font-weight: 600; }
+h3 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; font-weight: 700; }
+
+/* rule tagging */
+.how { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.chip {
+  text-align: left; font: 500 13px/1.3 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 8px 10px; cursor: pointer; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center;
+}
+.chip .num { font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--muted); }
+.chip .state { grid-column: 2; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; min-height: 1em; }
+.chip[data-tag="up"] { background: var(--up-soft); border-color: var(--up); }
+.chip[data-tag="up"] .state { color: var(--up); }
+.chip[data-tag="br"] { background: var(--br-soft); border-color: var(--br); }
+.chip[data-tag="br"] .state { color: var(--br); }
+.chip[data-mark]::after { grid-column: 1 / -1; font-size: 11px; font-weight: 700; }
+.chip[data-mark="ok"] { box-shadow: inset 0 0 0 2px var(--up); }
+.chip[data-mark="ok"]::after { content: "✓ Correct"; color: var(--up); }
+.chip[data-mark="wrong"] { box-shadow: inset 0 0 0 2px var(--br); }
+.chip[data-mark="wrong"]::after { content: "✗ Not this one"; color: var(--br); }
+.chip[data-mark="missed"] { box-shadow: inset 0 0 0 2px var(--amber); }
+.chip[data-mark="missed"]::after { content: "! Missed"; color: var(--amber); }
+.chip[data-mark="flip"] { box-shadow: inset 0 0 0 2px var(--amber); }
+.chip[data-mark="flip"]::after { content: "! Other way round"; color: var(--amber); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { font: 600 14px var(--body); border-radius: 6px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--petrol); }
+.btn.primary { background: var(--petrol); color: var(--paper); }
+.btn.ghost { background: transparent; color: var(--petrol); }
+.result { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.answer { border-left: 4px solid var(--petrol); background: var(--petrol-soft); border-radius: 0 8px 8px 0; padding: 14px 16px; display: grid; gap: 8px; }
+.answer p { margin: 0; max-width: 70ch; }
+.answer .tag { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-right: 6px; }
+.answer .tag.up { background: var(--up-soft); color: var(--up); }
+.answer .tag.br { background: var(--br-soft); color: var(--br); }
+
+/* writing */
+.frames { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.frame { font: 500 13px var(--body); background: var(--amber-soft); color: var(--ink); border: 1px dashed var(--amber); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+textarea { width: 100%; min-height: 110px; font: 16px/1.5 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; resize: vertical; }
+.hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+
+/* debate */
+.positions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.pos { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--bg); }
+.pos b { display: block; margin-bottom: 4px; }
+.pos p { margin: 0; font-size: 14px; color: var(--muted); }
+.vote { display: flex; flex-wrap: wrap; gap: 8px; }
+.vote button[aria-pressed="true"] { background: var(--petrol); color: var(--paper); }
+
+/* code rail */
+.rail { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 24px); overflow: auto; }
+@media (max-width: 900px) { .rail { position: static; max-height: none; } }
+.rail h2 { font-size: 19px; margin-bottom: 2px; }
+.rail .src { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.rail li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; font-size: 13px; line-height: 1.4; }
+.rail li .num { font-family: var(--mono); font-weight: 700; color: var(--petrol); }
+.rail li b { font-weight: 700; }
+.rail li.hl { background: var(--amber-soft); border-radius: 6px; margin: -3px -6px; padding: 3px 6px; }
+
+@media (prefers-reduced-motion: no-preference) { .chip, .tab, .btn { transition: background .15s, border-color .15s, box-shadow .15s; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Society of Petroleum Engineers · Guide for Professional Conduct</span>
+    <h1>Upheld or broken?</h1>
+    <p class="lede">Nine case files from the oil field and the office. Read each case, decide which SPE rules the engineer upheld or broke, check your answer, then explain your decision in writing.</p>
+    <ul class="steps">
+      <li><b>1 Read</b> the case</li>
+      <li><b>2 Tag</b> the rules: tap once for upheld, twice for broken</li>
+      <li><b>3 Check</b> and read the model answer</li>
+      <li><b>4 Explain</b> using the sentence frames</li>
+    </ul>
+  </header>
+
+  <div class="tabs" role="tablist" id="tabs" aria-label="Case files"></div>
+
+  <div class="desk">
+    <main class="file" id="file" aria-live="polite"></main>
+    <aside class="rail" aria-label="SPE rules">
+      <h2>The 14 rules</h2>
+      <p class="src">SPE Guide for Professional Conduct</p>
+      <ol id="rules"></ol>
+    </aside>
+  </div>
+</div>
+
+<script>
+const RULES = [
+  ["Competence and Qualifications", "Offer services only within their areas of competence and ensure the full disclosure of qualifications."],
+  ["Integrity and Fairness", "Be honest, ethical, and fair in professional matters and statements."],
+  ["Societal Responsibility and Public Understanding", "Put the safety of the general public/society first."],
+  ["Public Health/Safety", "Advise clients/employers on actions that may adversely affect public health, and take disclosure actions if necessary."],
+  ["Environmental Responsibility", "Recommend measures to minimise adverse environmental impacts of projects and designs."],
+  ["Public Statements", "Refrain from statements made on behalf of SPE, employers, or clients without consent."],
+  ["Professional Relationships", "Engage in professional relationships without discrimination with regard to any characteristic protected by law. Promote the exchange of differing perspectives."],
+  ["Confidentiality", "Act as faithful trustees for employers and clients. Maintain confidentiality of materials."],
+  ["Conflicts of Interest", "Disclose to affected parties known or potential conflicts of interest or other circumstances which might influence, or appear to influence, judgment."],
+  ["Professional Development", "Enhance their own professional competence; support that of others."],
+  ["Accountability and Recognition", "Accept responsibility for actions, seek and provide constructive criticism, and credit contributions of others appropriately."],
+  ["Legal Compliance", "Comply with applicable laws and standards. Support others to do so and report violations."],
+  ["Anti-Bribery and Corruption", "Refrain from engaging in bribery or corruption, directly or indirectly."],
+  ["Non-Harassment", "Refrain from engaging in any behaviour that undermines the dignity of other SPE members, including persistent mistreatment, whether verbal or physical, that harms, intimidates, offends, degrades, or humiliates another."],
+];
+
+// key: { rule number: "up" | "br" }, notes: { rule number: explanation }
+const CASES = [
+  {
+    ref: "CF-01", title: "The pressure test", who: "Omar · drilling engineer", setting: "Offshore platform",
+    text: "Omar is supervising a cement job on a new offshore well. The negative pressure test gives an unclear result. His supervisor says the rig is three days behind schedule and tells him to record the test as a pass and move on. Omar refuses, stops the operation, writes down exactly what he saw, and reports the instruction to the company's safety department.",
+    key: { 3: "up", 11: "up", 12: "up" },
+    notes: {
+      3: "He put the safety of the crew and the public ahead of the schedule.",
+      11: "He took responsibility for the decision and kept an honest record of it.",
+      12: "He followed well-integrity standards and reported the instruction to break them.",
+    },
+  },
+  {
+    ref: "CF-02", title: "The reserves report", who: "Sara · reservoir engineer", setting: "Head office",
+    text: "Two days before a meeting with investors, Sara's manager asks her to increase the field's proven reserves by 20%. No new data supports the change. Sara wants to keep her job, so she changes the number and does not mention it to anyone.",
+    key: { 2: "br", 12: "br" },
+    notes: {
+      2: "She knowingly reported a figure she knew was not honest.",
+      12: "Reserves reporting is regulated; inflating it without data breaks reporting standards.",
+    },
+  },
+  {
+    ref: "CF-03", title: "The supplier's gift", who: "Khalid · procurement engineer", setting: "Contracts department",
+    text: "Khalid is evaluating three bids for a drilling-fluids contract. One bidder is owned by his brother-in-law, but Khalid does not tell his manager. During the evaluation, the same company offers him a free family holiday. He accepts it and scores their bid highest.",
+    key: { 9: "br", 13: "br" },
+    notes: {
+      9: "He did not disclose a family link that could influence his judgment.",
+      13: "Accepting a holiday from a bidder during an evaluation is a bribe.",
+    },
+  },
+  {
+    ref: "CF-04", title: "Outside his field", who: "Faisal · production engineer", setting: "Consulting firm",
+    text: "A client asks Faisal's consulting firm for a geomechanics study on wellbore stability. Faisal has never been trained in geomechanics, but the fee is high. He completes the study himself, signs it as the responsible engineer, and does not tell the client about his background.",
+    key: { 1: "br" },
+    notes: {
+      1: "He offered a service outside his competence and hid his lack of qualifications.",
+    },
+  },
+  {
+    ref: "CF-05", title: "The produced-water leak", who: "Noura · field engineer", setting: "Onshore oil field",
+    text: "During a routine inspection, Noura finds a small leak of produced water from a pipeline near a farm's water well. She advises her manager that the leak could contaminate drinking water, recommends shutting the line and containing the spill, and asks the company to inform the farm owner.",
+    key: { 4: "up", 5: "up" },
+    notes: {
+      4: "She advised her employer about a risk to public health and asked for it to be disclosed.",
+      5: "She recommended measures to reduce the environmental damage.",
+    },
+  },
+  {
+    ref: "CF-06", title: "The weekly meeting", who: "Tariq · senior engineer", setting: "Project team",
+    text: "In weekly meetings, Tariq often makes jokes about a new graduate engineer's accent and nationality. He has stopped inviting her to technical reviews, and when she disagrees with his well design he tells the team to ignore her.",
+    key: { 7: "br", 14: "br" },
+    notes: {
+      7: "He excludes a colleague because of a protected characteristic and shuts down a differing view.",
+      14: "Repeated jokes that humiliate a colleague are persistent mistreatment.",
+    },
+  },
+  {
+    ref: "CF-07", title: "The model on the flash drive", who: "Hassan · simulation engineer", setting: "Changing jobs",
+    text: "Hassan is leaving his company to join a competitor. On his last day, he copies the client's full reservoir simulation model onto a flash drive so he can use it as a starting point in his new job.",
+    key: { 8: "br" },
+    notes: {
+      8: "The model belongs to the client; taking it breaks the duty to keep materials confidential.",
+    },
+  },
+  {
+    ref: "CF-08", title: "The decline-curve error", who: "Dr. Huda · lead engineer", setting: "Graduate training programme",
+    text: "Dr. Huda runs a monthly workshop to train graduate engineers in production forecasting. When a graduate finds an error in Dr. Huda's own decline-curve analysis, she thanks him in front of the team, corrects the forecast, and names him in the final report.",
+    key: { 10: "up", 11: "up" },
+    notes: {
+      10: "She supports the professional development of others through regular training.",
+      11: "She accepted criticism of her own work and credited the graduate's contribution.",
+    },
+  },
+  {
+    ref: "CF-09", title: "The LinkedIn post", who: "Yousef · exploration geologist", setting: "Social media",
+    text: "Yousef is excited about a new discovery. Before the company has made any announcement, he posts on LinkedIn that \"our new field will double the country's oil output.\" The figure is his own estimate, and he has not asked the company for permission.",
+    key: { 6: "br", 2: "br" },
+    notes: {
+      6: "He made a public statement on behalf of his employer without consent.",
+      2: "He presented his own estimate as a fact, which is not fair or accurate.",
+    },
+  },
+];
+
+const DEBATE = {
+  ref: "CF-10", title: "Were they ethical?", who: "Rania · HSE engineer", setting: "Open discussion · no answer key",
+  text: "Rania reports gas flaring above the permitted limit to her manager three times. Nothing changes. She then sends the company's internal flaring data to the national environmental regulator without telling her employer.",
+  positions: [
+    ["She was right", "Rules 3, 4, 5 and 12 put public safety, the environment and the law first. She had already tried the internal route."],
+    ["She was wrong", "Rule 8 says engineers act as faithful trustees for employers. She shared confidential data without consent."],
+    ["It depends", "On the risk to the public, the law in that country, and whether the company has a whistleblowing procedure."],
+  ],
+  prompts: [
+    "Which rules did Rania uphold, and which did she break?",
+    "Which rule should win when two rules conflict? Why?",
+    "What would you have done in her position?",
+  ],
+};
+
+const FRAMES = [
+  "___ upheld Rule __ (___) by ___ing …",
+  "___ broke Rule __ (___) because he/she ___ …",
+  "This was (un)ethical because …",
+  "Instead, he/she should have …",
+  "One could argue that …; however, …",
+];
+
+const state = { tab: 0, tags: CASES.map(() => ({})), checked: CASES.map(() => false), notes: {}, vote: null };
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+const saved = store.get("spe-ethics-notes");
+if (saved && typeof saved === "object") state.notes = saved;
+
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null) n.append(k.nodeType ? k : document.createTextNode(k));
+  return n;
+};
+
+function renderRules(highlight = []) {
+  const ol = document.getElementById("rules");
+  ol.replaceChildren(...RULES.map(([name, text], i) =>
+    el("li", { class: highlight.includes(i + 1) ? "hl" : "" }, el("span", { class: "num" }, String(i + 1)), el("span", {}, el("b", {}, name + ": "), text))));
+}
+
+function scoreOf(i) {
+  const key = CASES[i].key, tags = state.tags[i];
+  let right = 0;
+  for (const [r, v] of Object.entries(key)) if (tags[r] === v) right++;
+  return right;
+}
+const totalKeys = CASES.reduce((s, c) => s + Object.keys(c.key).length, 0);
+
+function renderTabs() {
+  const tabs = document.getElementById("tabs");
+  const items = CASES.map((c, i) => el("button", {
+    class: "tab" + (state.checked[i] ? " done" : ""), role: "tab", "aria-selected": String(state.tab === i), id: "tab-" + i,
+    onclick: () => { state.tab = i; render(); },
+  }, el("span", { class: "dot", "aria-hidden": "true" }), el("span", { class: "n" }, String(i + 1).padStart(2, "0")), c.title));
+  items.push(el("button", { class: "tab debate", role: "tab", "aria-selected": String(state.tab === CASES.length), onclick: () => { state.tab = CASES.length; render(); } },
+    el("span", { class: "n" }, "10"), "Debate"));
+  const done = state.checked.filter(Boolean).length;
+  const pts = CASES.reduce((s, c, i) => s + (state.checked[i] ? scoreOf(i) : 0), 0);
+  items.push(el("span", { class: "score" }, `${done}/9 checked · ${pts}/${totalKeys} rules correct`));
+  tabs.replaceChildren(...items);
+}
+
+function writingBlock(id, label) {
+  const ta = el("textarea", { id: "write-" + id, placeholder: "Write 3–4 sentences. Name the rule number and the rule, then say why." });
+  ta.value = state.notes[id] || "";
+  ta.addEventListener("input", () => { state.notes[id] = ta.value; store.set("spe-ethics-notes", state.notes); });
+  const frames = el("div", { class: "frames" }, FRAMES.map((f) => el("button", { class: "frame", type: "button", title: "Add to your answer",
+    onclick: () => { ta.value += (ta.value && !ta.value.endsWith(" ") ? " " : "") + f; ta.dispatchEvent(new Event("input")); ta.focus(); } }, f)));
+  return el("section", {}, el("h3", {}, label), frames, ta, el("p", { class: "hint" }, "Tap a frame to add it, then fill in the gaps. Your writing stays in this browser only."));
+}
+
+function renderCase(i) {
+  const c = CASES[i], tags = state.tags[i], checked = state.checked[i];
+  renderRules(checked ? Object.keys(c.key).map(Number) : []);
+
+  const chips = el("div", { class: "chips" }, RULES.map(([name], r0) => {
+    const r = r0 + 1, tag = tags[r] || "";
+    const attrs = { class: "chip", type: "button", "data-tag": tag, "aria-label": `Rule ${r}, ${name}: ${tag === "up" ? "upheld" : tag === "br" ? "broken" : "not tagged"}` };
+    if (checked) {
+      const k = c.key[r];
+      if (k && tag === k) attrs["data-mark"] = "ok";
+      else if (k && tag && tag !== k) attrs["data-mark"] = "flip";
+      else if (k && !tag) attrs["data-mark"] = "missed";
+      else if (!k && tag) attrs["data-mark"] = "wrong";
+    }
+    attrs.onclick = () => {
+      if (state.checked[i]) return;
+      tags[r] = tag === "" ? "up" : tag === "up" ? "br" : "";
+      renderCase(i);
+    };
+    return el("button", attrs, el("span", { class: "num" }, String(r)), el("span", {}, name), el("span", { class: "state" }, tag === "up" ? "Upheld" : tag === "br" ? "Broken" : ""));
+  }));
+
+  const n = Object.keys(c.key).length;
+  const extra = Object.entries(tags).filter(([r, v]) => v && !c.key[r]).length;
+  const actions = el("div", { class: "actions" },
+    checked
+      ? el("button", { class: "btn ghost", type: "button", onclick: () => { state.tags[i] = {}; state.checked[i] = false; render(); } }, "Try again")
+      : el("button", { class: "btn primary", type: "button", onclick: () => { state.checked[i] = true; render(); } }, "Check my answer"),
+    checked ? el("span", { class: "result" }, `${scoreOf(i)} of ${n} rules correct` + (extra ? ` · ${extra} extra` : "")) : el("span", { class: "result" }, `Hint: ${n} rule${n > 1 ? "s" : ""} in this case`));
+
+  const answer = checked ? el("div", { class: "answer" }, el("h3", {}, "Model answer"),
+    Object.entries(c.key).map(([r, v]) => el("p", {}, el("span", { class: "tag " + v }, v === "up" ? "UPHELD" : "BROKEN"),
+      el("b", {}, `Rule ${r} (${RULES[r - 1][0]}). `), c.notes[r]))) : null;
+
+  document.getElementById("file").replaceChildren(
+    el("div", { class: "file-head" }, el("span", { class: "ref" }, `CASE FILE ${c.ref} · ${c.setting.toUpperCase()}`), el("span", { class: "who" }, c.who)),
+    el("div", { class: "file-body" },
+      el("h2", {}, c.title),
+      el("p", { class: "scenario" }, c.text),
+      el("p", { class: "question" }, `Which rules did ${c.who.split(" · ")[0]} uphold or break?`),
+      el("section", {}, el("h3", {}, "Tag the rules"), el("p", { class: "how" }, "Tap once for upheld, twice for broken, three times to clear."), chips),
+      actions, answer, writingBlock(c.ref, "Explain your decision")));
+  renderTabs();
+}
+
+function renderDebate() {
+  const d = DEBATE;
+  renderRules([3, 4, 5, 8, 12]);
+  const opts = ["Ethical", "Unethical", "Not sure yet"];
+  const vote = el("div", { class: "vote" }, opts.map((o) => el("button", { class: "btn ghost", type: "button", "aria-pressed": String(state.vote === o),
+    onclick: () => { state.vote = o; renderDebate(); } }, o)));
+  document.getElementById("file").replaceChildren(
+    el("div", { class: "file-head" }, el("span", { class: "ref" }, `CASE FILE ${d.ref} · ${d.setting.toUpperCase()}`), el("span", { class: "who" }, d.who)),
+    el("div", { class: "file-body" },
+      el("h2", {}, d.title),
+      el("p", { class: "scenario" }, d.text),
+      el("section", {}, el("h3", {}, "Your first reaction"), vote),
+      el("section", {}, el("h3", {}, "Three positions"), el("div", { class: "positions" }, d.positions.map(([h, t]) => el("div", { class: "pos" }, el("b", {}, h), el("p", {}, t))))),
+      el("section", {}, el("h3", {}, "Discuss in pairs"), el("ol", {}, d.prompts.map((p) => el("li", {}, p)))),
+      writingBlock(d.ref, "Write your position")));
+  renderTabs();
+}
+
+function render() { state.tab < CASES.length ? renderCase(state.tab) : renderDebate(); }
+render();
+</script>
+</body>
+</html>

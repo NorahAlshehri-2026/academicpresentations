@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}</style>
+<title>Ethics Rig</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a game-show stage for the projector. Scoreboard of team "tanks" across the top, round switcher below it, one big stage card in the middle. Deliberately single-theme: night shift on the rig. */
+:root {
+  --night: #0b1418;
+  --deck: #13232b;
+  --deck-2: #1b3039;
+  --steel: #2c4651;
+  --ink: #eef4f5;
+  --muted: #9fb4bb;
+  --flare: #ff8a1f;
+  --crude: #f5c542;
+  --go: #43d18a;
+  --stop: #ff5a52;
+  --display: "Bricolage Grotesque", "Arial Black", Impact, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--night); }
+body {
+  background: radial-gradient(1200px 500px at 50% -10%, #1d3a45 0%, var(--night) 60%) var(--night);
+  color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.5; min-height: 100%;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 40px;
+}
+.wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--crude); outline-offset: 2px; }
+
+/* top bar */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; justify-content: space-between; }
+.brand { display: flex; align-items: baseline; gap: 12px; }
+.brand h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 46px); line-height: 1; margin: 0; letter-spacing: -.01em; }
+.brand h1 span { color: var(--flare); }
+.brand small { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.rounds { display: flex; flex-wrap: wrap; gap: 6px; }
+.round { background: var(--deck); border: 1px solid var(--steel); border-radius: 999px; padding: 7px 14px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.round b { font-family: var(--mono); color: var(--crude); margin-right: 6px; }
+.round[aria-pressed="true"] { background: var(--flare); border-color: var(--flare); color: var(--night); }
+.round[aria-pressed="true"] b { color: var(--night); }
+
+/* scoreboard */
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.team { background: var(--deck); border: 1px solid var(--steel); border-radius: 12px; padding: 10px 12px; display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; position: relative; overflow: hidden; }
+.team.lead { border-color: var(--crude); box-shadow: 0 0 0 1px var(--crude); }
+.tank { width: 34px; height: 46px; border: 2px solid var(--muted); border-radius: 6px 6px 8px 8px; position: relative; overflow: hidden; background: var(--night); }
+.tank i { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(var(--crude), #b8860b); transition: height .5s cubic-bezier(.2,1.4,.4,1); }
+.team input { width: 100%; min-width: 0; background: transparent; border: 0; color: var(--ink); font: 700 15px var(--body); padding: 2px 0; border-bottom: 1px dashed transparent; }
+.team input:hover { border-bottom-color: var(--steel); }
+.team .bbl { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.team .bbl b { color: var(--crude); font-size: 20px; }
+.pm { display: grid; gap: 4px; }
+.pm button { width: 32px; height: 26px; border-radius: 6px; border: 1px solid var(--steel); background: var(--deck-2); cursor: pointer; font-weight: 700; line-height: 1; }
+.pm button.plus { background: var(--crude); color: var(--night); border-color: var(--crude); }
+.pop { position: absolute; right: 54px; top: 6px; font-family: var(--mono); font-weight: 700; color: var(--crude); pointer-events: none; animation: pop .9s ease-out forwards; }
+@keyframes pop { from { transform: translateY(8px); opacity: 1 } to { transform: translateY(-22px); opacity: 0 } }
+.teamctl { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.teamctl button { background: none; border: 1px solid var(--steel); border-radius: 6px; padding: 3px 9px; cursor: pointer; font-size: 13px; color: var(--muted); }
+
+/* stage */
+.stage { background: var(--deck); border: 1px solid var(--steel); border-radius: 18px; padding: clamp(18px, 3vw, 32px); display: grid; gap: 20px; }
+.stagehead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.kicker { font-family: var(--mono); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--flare); font-weight: 700; }
+.prog { display: flex; gap: 4px; flex-wrap: wrap; }
+.prog i { width: 18px; height: 6px; border-radius: 3px; background: var(--steel); }
+.prog i.on { background: var(--crude); }
+.prog i.now { background: var(--flare); }
+.big { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 4vw, 42px); line-height: 1.12; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+.scenario { font-size: clamp(17px, 2vw, 21px); line-height: 1.55; margin: 0; max-width: 70ch; }
+.who { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { border-radius: 10px; padding: 11px 20px; font-weight: 700; cursor: pointer; border: 2px solid var(--flare); background: transparent; color: var(--flare); font-size: 16px; }
+.btn.go { background: var(--flare); color: var(--night); }
+.btn:disabled { opacity: .4; cursor: default; }
+
+/* timer */
+.timer { --p: 1; width: 86px; height: 86px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--tc, var(--go)) calc(var(--p) * 360deg), var(--deck-2) 0); position: relative; flex: none; }
+.timer::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--deck); }
+.timer span { position: relative; font-family: var(--mono); font-weight: 700; font-size: 26px; font-variant-numeric: tabular-nums; }
+.timer.low { --tc: var(--stop); }
+.timer.low span { color: var(--stop); }
+.timer.mid { --tc: var(--crude); }
+
+/* options */
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.opt { text-align: left; background: var(--deck-2); border: 2px solid var(--steel); border-radius: 14px; padding: 16px 18px; cursor: pointer; display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; font-size: 18px; font-weight: 600; }
+.opt .n { font-family: var(--display); font-weight: 800; font-size: 34px; color: var(--crude); text-align: center; line-height: 1; }
+.opt:hover:not(:disabled) { border-color: var(--crude); }
+.opt:disabled { cursor: default; }
+.opt.right { border-color: var(--go); background: color-mix(in srgb, var(--go) 18%, var(--deck-2)); }
+.opt.right .n { color: var(--go); }
+.opt.wrong { border-color: var(--stop); background: color-mix(in srgb, var(--stop) 16%, var(--deck-2)); }
+.opt.dim { opacity: .45; }
+.reveal { border-left: 4px solid var(--go); padding: 10px 16px; background: var(--deck-2); border-radius: 0 10px 10px 0; margin: 0; }
+.reveal b { color: var(--go); }
+
+/* stamps */
+.stamps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.stamp { border: 3px solid currentColor; border-radius: 12px; padding: 12px 16px; display: grid; gap: 6px; background: var(--deck-2); }
+.stamp.up { color: var(--go); }
+.stamp.br { color: var(--stop); }
+.stamp .lbl { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: .04em; line-height: 1; }
+.stamp .r { font-weight: 700; color: var(--ink); }
+.stamp p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (prefers-reduced-motion: no-preference) {
+  .stamp { animation: slam .45s cubic-bezier(.2,1.6,.4,1) both; }
+  .stamp:nth-child(2) { animation-delay: .25s } .stamp:nth-child(3) { animation-delay: .5s }
+  @keyframes slam { from { transform: scale(1.6) rotate(-6deg); opacity: 0 } to { transform: none; opacity: 1 } }
+  .opt, .round, .btn { transition: border-color .15s, background .15s, opacity .15s; }
+}
+.hidden-ans { border: 2px dashed var(--steel); border-radius: 12px; padding: 18px; color: var(--muted); text-align: center; }
+.tips { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; display: grid; gap: 4px; }
+.tips b { color: var(--ink); }
+
+/* debate */
+.votes { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.vcard { background: var(--deck-2); border: 2px solid var(--steel); border-radius: 14px; padding: 14px 16px; display: grid; gap: 8px; }
+.vcard h3 { font-family: var(--display); font-size: 22px; margin: 0; }
+.vcard p { margin: 0; color: var(--muted); font-size: 15px; }
+.bar { height: 12px; background: var(--night); border-radius: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--flare); transition: width .3s; }
+.count { display: flex; align-items: center; gap: 10px; font-family: var(--mono); }
+.count b { font-size: 24px; color: var(--crude); min-width: 2ch; text-align: center; }
+.count button { width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--steel); background: var(--deck); cursor: pointer; font-weight: 700; }
+.prompts { margin: 0; padding-left: 22px; display: grid; gap: 6px; font-size: 18px; }
+
+.code { background: var(--deck); border: 1px solid var(--steel); border-radius: 14px; }
+.code summary { cursor: pointer; padding: 12px 18px; font-weight: 700; }
+.code summary small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+.code ol { list-style: none; margin: 0; padding: 0 18px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 22px; font-size: 14px; color: var(--muted); }
+.code li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; }
+.code li span:first-child { font-family: var(--mono); font-weight: 700; color: var(--crude); }
+.code li b { color: var(--ink); }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><h1>Ethics <span>Rig</span></h1><small>SPE Guide for Professional Conduct</small></div>
+    <div class="rounds" id="rounds"></div>
+  </div>
+  <div>
+    <div class="board" id="board"></div>
+    <div class="teamctl" style="margin-top:8px">
+      <span>Tap a team name to rename it.</span>
+      <button type="button" id="addTeam">+ Team</button>
+      <button type="button" id="rmTeam">− Team</button>
+      <button type="button" id="resetScores">Reset barrels</button>
+    </div>
+  </div>
+  <main class="stage" id="stage" aria-live="polite"></main>
+  <details class="code">
+    <summary>The 14 SPE rules <small>open for reference</small></summary>
+    <ol id="code"></ol>
+  </details>
+</div>
+
+<script>
+const RULES = [
+  ["Competence and Qualifications", "Offer services only within their areas of competence and ensure the full disclosure of qualifications."],
+  ["Integrity and Fairness", "Be honest, ethical, and fair in professional matters and statements."],
+  ["Societal Responsibility and Public Understanding", "Put the safety of the general public/society first."],
+  ["Public Health/Safety", "Advise clients/employers on actions that may adversely affect public health, and take disclosure actions if necessary."],
+  ["Environmental Responsibility", "Recommend measures to minimise adverse environmental impacts of projects and designs."],
+  ["Public Statements", "Refrain from statements made on behalf of SPE, employers, or clients without consent."],
+  ["Professional Relationships", "Engage in professional relationships without discrimination with regard to any characteristic protected by law. Promote the exchange of differing perspectives."],
+  ["Confidentiality", "Act as faithful trustees for employers and clients. Maintain confidentiality of materials."],
+  ["Conflicts of Interest", "Disclose to affected parties known or potential conflicts of interest or other circumstances which might influence, or appear to influence, judgment."],
+  ["Professional Development", "Enhance their own professional competence; support that of others."],
+  ["Accountability and Recognition", "Accept responsibility for actions, seek and provide constructive criticism, and credit contributions of others appropriately."],
+  ["Legal Compliance", "Comply with applicable laws and standards. Support others to do so and report violations."],
+  ["Anti-Bribery and Corruption", "Refrain from engaging in bribery or corruption, directly or indirectly."],
+  ["Non-Harassment", "Refrain from engaging in any behaviour that undermines the dignity of other SPE members, including persistent mistreatment, whether verbal or physical, that harms, intimidates, offends, degrades, or humiliates another."],
+];
+
+// Round 1: one action per rule. [action, correct rule, upheld?]
+const RUSH = [
+  ["A production engineer signs a geomechanics report although she has never been trained in geomechanics.", 1, false],
+  ["A well-site engineer rounds up the daily production figure so the monthly report looks better.", 2, false],
+  ["A drilling supervisor shuts in a well when gas is detected near a school.", 3, true],
+  ["An engineer warns the client that a new flare stack could affect the health of nearby residents.", 4, true],
+  ["A mud engineer proposes a closed-loop system to cut drilling waste.", 5, true],
+  ["An engineer posts the company's quarterly production results online before they are released.", 6, false],
+  ["A team leader refuses to hire a qualified candidate because of her religion.", 7, false],
+  ["A geologist emails a client's well logs to a friend at a rival company.", 8, false],
+  ["An engineer tells the tender panel that his cousin owns one of the bidding companies.", 9, true],
+  ["A senior engineer takes a reservoir-simulation course and then coaches two graduates.", 10, true],
+  ["An engineer admits a mistake in her design and thanks the colleague who spotted it.", 11, true],
+  ["A field engineer reports a contractor who is dumping waste illegally.", 12, true],
+  ["A logistics engineer pays a customs officer to release equipment faster.", 13, false],
+  ["A supervisor shouts at a trainee and mocks him in front of the crew every day.", 14, false],
+];
+
+// Round 2: case files
+const CASES = [
+  { title: "The pressure test", who: "Omar · drilling engineer · offshore platform",
+    text: "Omar is supervising a cement job on a new offshore well. The negative pressure test gives an unclear result. His supervisor says the rig is three days behind schedule and tells him to record the test as a pass. Omar refuses, stops the operation, writes down exactly what he saw, and reports the instruction to the safety department.",
+    key: [[3, "up", "He put the safety of the crew and the public ahead of the schedule."], [11, "up", "He took responsibility and kept an honest record."], [12, "up", "He followed well-integrity standards and reported the instruction to break them."]] },
+  { title: "The reserves report", who: "Sara · reservoir engineer · head office",
+    text: "Two days before a meeting with investors, Sara's manager asks her to increase the field's proven reserves by 20%. No new data supports the change. Sara wants to keep her job, so she changes the number and tells no one.",
+    key: [[2, "br", "She reported a figure she knew was not honest."], [12, "br", "Inflating regulated reserves figures without data breaks reporting standards."]] },
+  { title: "The supplier's gift", who: "Khalid · procurement engineer · contracts department",
+    text: "Khalid is evaluating three bids for a drilling-fluids contract. One bidder is owned by his brother-in-law, but Khalid does not tell his manager. During the evaluation, the same company offers him a free family holiday. He accepts it and scores their bid highest.",
+    key: [[9, "br", "He hid a family link that could influence his judgment."], [13, "br", "A holiday from a bidder during an evaluation is a bribe."]] },
+  { title: "Outside his field", who: "Faisal · production engineer · consulting firm",
+    text: "A client asks Faisal's firm for a wellbore-stability study. Faisal has never been trained in geomechanics, but the fee is high. He completes the study himself, signs it as the responsible engineer, and does not tell the client about his background.",
+    key: [[1, "br", "He worked outside his competence and hid his lack of qualifications."]] },
+  { title: "The produced-water leak", who: "Noura · field engineer · onshore oil field",
+    text: "During an inspection, Noura finds produced water leaking from a pipeline near a farm's water well. She warns her manager that drinking water could be contaminated, recommends shutting the line and containing the spill, and asks the company to inform the farm owner.",
+    key: [[4, "up", "She advised her employer about a public-health risk and asked for disclosure."], [5, "up", "She recommended measures to limit the environmental damage."]] },
+  { title: "The weekly meeting", who: "Tariq · senior engineer · project team",
+    text: "In weekly meetings, Tariq makes jokes about a new graduate engineer's accent and nationality. He has stopped inviting her to technical reviews, and when she disagrees with his well design he tells the team to ignore her.",
+    key: [[7, "br", "He excludes a colleague over a protected characteristic and shuts down a differing view."], [14, "br", "Repeated humiliating jokes are persistent mistreatment."]] },
+  { title: "The flash drive", who: "Hassan · simulation engineer · changing jobs",
+    text: "Hassan is leaving to join a competitor. On his last day, he copies the client's full reservoir simulation model onto a flash drive to use as a starting point in his new job.",
+    key: [[8, "br", "The model belongs to the client; taking it breaks confidentiality."]] },
+  { title: "The decline-curve error", who: "Dr. Huda · lead engineer · graduate programme",
+    text: "Dr. Huda runs a monthly forecasting workshop for graduate engineers. When a graduate finds an error in her own decline-curve analysis, she thanks him in front of the team, corrects the forecast, and names him in the final report.",
+    key: [[10, "up", "She supports other engineers' professional development."], [11, "up", "She accepted criticism and credited the graduate's contribution."]] },
+  { title: "The LinkedIn post", who: "Yousef · exploration geologist · social media",
+    text: "Before the company has announced anything, Yousef posts on LinkedIn that \"our new field will double the country's oil output.\" The figure is his own estimate, and he has not asked the company for permission.",
+    key: [[6, "br", "He spoke publicly for his employer without consent."], [2, "br", "He presented a personal estimate as fact."]] },
+];
+
+const DEBATE = {
+  title: "Were they ethical?", who: "Rania · HSE engineer · gas plant",
+  text: "Rania reports gas flaring above the permitted limit to her manager three times. Nothing changes. She then sends the company's internal flaring data to the national environmental regulator without telling her employer.",
+  positions: [
+    ["She was right", "Rules 3, 4, 5 and 12: public safety, the environment and the law come first. She had already tried the internal route."],
+    ["She was wrong", "Rule 8: engineers are faithful trustees for their employers. She shared confidential data without consent."],
+    ["It depends", "On the risk to the public, the country's laws, and whether the company has a whistleblowing procedure."],
+  ],
+  prompts: ["Which rules did Rania uphold, and which did she break?", "When two rules conflict, which should win? Why?", "What would you have done in her position?"],
+};
+
+/* ---------- state ---------- */
+const S = {
+  round: "rush", teams: [{ name: "Team Drill", b: 0 }, { name: "Team Pump", b: 0 }, { name: "Team Flare", b: 0 }],
+  rush: { i: 0, picked: null, order: [] }, cases: { i: 0, shown: false }, votes: [0, 0, 0],
+};
+const MAXB = () => Math.max(10, ...S.teams.map((t) => t.b));
+const shuffle = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+S.rush.order = shuffle(RUSH.map((_, i) => i));
+const optionsFor = (correct) => shuffle([correct, ...shuffle(RULES.map((_, i) => i + 1).filter((n) => n !== correct)).slice(0, 3)]);
+S.rush.opts = S.rush.order.map((k) => optionsFor(RUSH[k][1]));
+
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k === "style") n.style.cssText = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else if (v !== false && v != null) n.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) n.append(k.nodeType ? k : document.createTextNode(k));
+  return n;
+};
+
+/* ---------- sound ---------- */
+let ac;
+function beep(freq = 660, dur = .15, type = "sine", when = 0) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq; o.connect(g); g.connect(ac.destination);
+    const t = ac.currentTime + when; g.gain.setValueAtTime(.18, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.start(t); o.stop(t + dur);
+  } catch (e) {}
+}
+const ding = () => { beep(784, .12); beep(1047, .25, "sine", .12); };
+const buzz = () => beep(140, .4, "sawtooth");
+
+/* ---------- timer ---------- */
+let T = null;
+function startTimer(secs, node) {
+  stopTimer();
+  let left = secs;
+  const paint = () => {
+    node.style.setProperty("--p", left / secs);
+    node.className = "timer" + (left <= secs * .25 ? " low" : left <= secs * .5 ? " mid" : "");
+    node.querySelector("span").textContent = left;
+  };
+  paint();
+  T = setInterval(() => {
+    left--; paint();
+    if (left > 0 && left <= 3) beep(520, .08);
+    if (left <= 0) { stopTimer(); buzz(); }
+  }, 1000);
+}
+function stopTimer() { if (T) clearInterval(T); T = null; }
+const timerNode = (secs) => el("div", { class: "timer", style: "--p:1", role: "timer", "aria-label": "Countdown" }, el("span", {}, String(secs)));
+
+/* ---------- scoreboard ---------- */
+function renderBoard(popIdx, popVal) {
+  const top = Math.max(...S.teams.map((t) => t.b));
+  document.getElementById("board").replaceChildren(...S.teams.map((t, i) => {
+    const name = el("input", { id: "team-" + i, value: t.name, "aria-label": "Team name", maxlength: "18" });
+    name.addEventListener("input", () => { t.name = name.value; });
+    const card = el("div", { class: "team" + (t.b > 0 && t.b === top ? " lead" : "") },
+      el("div", { class: "tank", "aria-hidden": "true" }, el("i", { style: `height:${Math.min(100, (t.b / MAXB()) * 100)}%` })),
+      el("div", {}, name, el("div", { class: "bbl" }, el("b", {}, String(t.b)), " barrels")),
+      el("div", { class: "pm" },
+        el("button", { class: "plus", type: "button", "aria-label": `Add a barrel to ${t.name}`, onclick: () => award(i, 1) }, "+"),
+        el("button", { type: "button", "aria-label": `Remove a barrel from ${t.name}`, onclick: () => award(i, -1) }, "−")));
+    if (popIdx === i) card.append(el("span", { class: "pop" }, (popVal > 0 ? "+" : "") + popVal));
+    return card;
+  }));
+}
+function award(i, n) {
+  S.teams[i].b = Math.max(0, S.teams[i].b + n);
+  if (n > 0) ding();
+  renderBoard(i, n);
+}
+document.getElementById("addTeam").onclick = () => { if (S.teams.length < 6) { S.teams.push({ name: "Team " + ["Valve", "Riser", "Derrick"][S.teams.length - 3] , b: 0 }); renderBoard(); } };
+document.getElementById("rmTeam").onclick = () => { if (S.teams.length > 2) { S.teams.pop(); renderBoard(); } };
+document.getElementById("resetScores").onclick = () => { S.teams.forEach((t) => (t.b = 0)); renderBoard(); };
+
+/* ---------- rounds ---------- */
+const ROUNDS = [["rush", "1", "Rule Rush"], ["cases", "2", "Case Files"], ["debate", "3", "The Big Debate"]];
+function renderRounds() {
+  document.getElementById("rounds").replaceChildren(...ROUNDS.map(([id, n, label]) =>
+    el("button", { class: "round", type: "button", "aria-pressed": String(S.round === id), onclick: () => { stopTimer(); S.round = id; render(); } }, el("b", {}, n), label)));
+}
+const progress = (n, i, done) => el("div", { class: "prog", "aria-label": `Question ${i + 1} of ${n}` }, Array.from({ length: n }, (_, k) => el("i", { class: k === i ? "now" : k < i || done ? "on" : "" })));
+
+function renderRush() {
+  const R = S.rush, k = R.order[R.i], [action, correct, upheld] = RUSH[k], opts = R.opts[R.i];
+  const tn = timerNode(20);
+  const picked = R.picked;
+  const optBtns = opts.map((n) => {
+    let cls = "opt";
+    if (picked != null) cls += n === correct ? " right" : n === picked ? " wrong" : " dim";
+    return el("button", { class: cls, type: "button", disabled: picked != null, onclick: () => {
+      R.picked = n; stopTimer(); n === correct ? ding() : buzz(); renderRush();
+    } }, el("span", { class: "n" }, String(n)), RULES[n - 1][0]);
+  });
+  const last = R.i === RUSH.length - 1;
+  document.getElementById("stage").replaceChildren(
+    el("div", { class: "stagehead" }, el("span", { class: "kicker" }, `Round 1 · Rule Rush · ${R.i + 1} / ${RUSH.length}`), progress(RUSH.length, R.i)),
+    el("div", { class: "row", style: "justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:18px" },
+      el("p", { class: "big" }, action), picked == null ? tn : null),
+    el("p", { class: "who" }, "Which rule is this about? Teams shout the rule number, then tap it."),
+    el("div", { class: "opts" }, optBtns),
+    picked != null ? el("p", { class: "reveal" }, el("b", {}, `Rule ${correct}: ${RULES[correct - 1][0]}. `),
+      `${upheld ? "UPHELD" : "BROKEN"}: ${RULES[correct - 1][1]}`) : null,
+    el("div", { class: "row" },
+      el("button", { class: "btn", type: "button", disabled: R.i === 0, onclick: () => { R.i--; R.picked = null; renderRush(); } }, "Back"),
+      el("button", { class: "btn go", type: "button", onclick: () => {
+        if (last) { stopTimer(); S.round = "cases"; render(); return; }
+        R.i++; R.picked = null; renderRush();
+      } }, last ? "Go to Round 2" : picked == null ? "Skip" : "Next action"),
+      picked == null ? null : el("span", { class: "who" }, "Bonus: was the rule upheld or broken? +1 barrel for the right call.")));
+  if (picked == null) startTimer(20, tn);
+}
+
+function renderCases() {
+  const C = S.cases, c = CASES[C.i], last = C.i === CASES.length - 1;
+  const tn = timerNode(90);
+  document.getElementById("stage").replaceChildren(
+    el("div", { class: "stagehead" }, el("span", { class: "kicker" }, `Round 2 · Case Files · ${C.i + 1} / ${CASES.length}`), progress(CASES.length, C.i)),
+    el("div", { class: "row", style: "justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:18px" },
+      el("div", { style: "display:grid;gap:8px;min-width:0" }, el("p", { class: "big" }, c.title), el("span", { class: "who" }, c.who)),
+      C.shown ? null : tn),
+    el("p", { class: "scenario" }, c.text),
+    C.shown
+      ? el("div", { class: "stamps" }, c.key.map(([r, v, note]) => el("div", { class: "stamp " + v },
+          el("span", { class: "lbl" }, v === "up" ? "UPHELD" : "BROKEN"), el("span", { class: "r" }, `Rule ${r} · ${RULES[r - 1][0]}`), el("p", {}, note))))
+      : el("div", { class: "hidden-ans" },
+          el("ol", { class: "tips", style: "text-align:left;max-width:640px;margin:0 auto" },
+            el("li", {}, el("b", {}, "Discuss: "), `which rules did ${c.who.split(" · ")[0]} uphold or break? (${c.key.length} rule${c.key.length > 1 ? "s" : ""} to find)`),
+            el("li", {}, el("b", {}, "Write "), "one sentence per rule: \"He/She upheld/broke Rule __ because …\""),
+            el("li", {}, el("b", {}, "Score: "), "1 barrel per correct rule, +1 if upheld/broken is right, +1 for the best explanation."))),
+    el("div", { class: "row" },
+      el("button", { class: "btn", type: "button", disabled: C.i === 0, onclick: () => { C.i--; C.shown = false; renderCases(); } }, "Back"),
+      C.shown
+        ? el("button", { class: "btn go", type: "button", onclick: () => { if (last) { S.round = "debate"; render(); return; } C.i++; C.shown = false; renderCases(); } }, last ? "Go to the Big Debate" : "Next case")
+        : el("button", { class: "btn go", type: "button", onclick: () => { stopTimer(); C.shown = true; beep(220, .12, "square"); beep(330, .2, "square", .1); renderCases(); } }, "Reveal the verdict")));
+  if (!C.shown) startTimer(90, tn);
+}
+
+function renderDebate() {
+  const d = DEBATE, total = S.votes.reduce((a, b) => a + b, 0) || 1;
+  const tn = timerNode(120);
+  document.getElementById("stage").replaceChildren(
+    el("div", { class: "stagehead" }, el("span", { class: "kicker" }, "Round 3 · The Big Debate · no answer key")),
+    el("div", { class: "row", style: "justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:18px" },
+      el("div", { style: "display:grid;gap:8px;min-width:0" }, el("p", { class: "big" }, d.title), el("span", { class: "who" }, d.who)), tn),
+    el("p", { class: "scenario" }, d.text),
+    el("div", { class: "votes" }, d.positions.map(([h, t], i) => el("div", { class: "vcard" },
+      el("h3", {}, h), el("p", {}, t),
+      el("div", { class: "bar" }, el("i", { style: `width:${(S.votes[i] / total) * 100}%` })),
+      el("div", { class: "count" },
+        el("button", { type: "button", "aria-label": "One fewer hand", onclick: () => { S.votes[i] = Math.max(0, S.votes[i] - 1); renderDebate(); } }, "−"),
+        el("b", {}, String(S.votes[i])), el("span", {}, "hands"),
+        el("button", { type: "button", "aria-label": "One more hand", onclick: () => { S.votes[i]++; beep(600, .06); renderDebate(); } }, "+"))))),
+    el("ol", { class: "prompts" }, d.prompts.map((p) => el("li", {}, p))),
+    el("p", { class: "who" }, "Teams defend a position for one minute each. Award barrels for the strongest argument that names the rules."));
+  startTimer(120, tn);
+}
+
+function render() {
+  renderRounds(); renderBoard();
+  ({ rush: renderRush, cases: renderCases, debate: renderDebate })[S.round]();
+}
+document.getElementById("code").replaceChildren(...RULES.map(([n, t], i) => el("li", {}, el("span", {}, String(i + 1)), el("span", {}, el("b", {}, n + ": "), t))));
+render();
+</script>
+</body>
+</html>

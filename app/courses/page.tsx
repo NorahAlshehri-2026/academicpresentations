@@ -39,6 +39,15 @@ export default async function Courses() {
           <p className="small muted">No courses have been published yet.</p>
         </div>
       )}
+
+      {profile ? (
+        <div className="grid">
+          <Link className="card" href="/reading-writing" style={{ textDecoration: "none" }}>
+            <h3>Advanced Reading and Writing</h3>
+            <p className="small muted">Interactive activities, including Ethics Rig and Upheld or Broken?</p>
+          </Link>
+        </div>
+      ) : null}
     </>
   );
 }
