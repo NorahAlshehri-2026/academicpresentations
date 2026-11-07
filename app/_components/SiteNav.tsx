@@ -23,7 +23,7 @@ type Item = [href: string, label: string, tone: Tone, cta?: boolean];
 
 /**
  * The header links, laid out like the original practice studio:
- * Home · Guide · Units · Coursebook · Activities · My recordings · Shared with me · Rubric · My progress.
+ * Home · Guide · Units · Coursebook · Activities · Games · My recordings · Shared with me · Rubric · My progress.
  * Staff get the same course pages (as a student preview) plus their own.
  */
 export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?: boolean }) {
@@ -39,6 +39,7 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
       ["/units", "Units", "learn"],
       ["/coursebook", "Coursebook", "learn"],
       ["/activities", "Activities", "practice"],
+      ["/games", "Games", "practice"],
       ["/recordings", "My recordings", "record"],
       ["/shared", "Shared with me", "share"],
       ["/rubric", "Rubric", "assess"],
@@ -51,6 +52,7 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
       ["/units", "Units", "learn"],
       ["/coursebook", "Coursebook", "learn"],
       ["/activities", "Activities", "practice"],
+      ["/games", "Games", "practice"],
       ["/teach", "My classes", "teach"],
     ];
     if (role === "admin") items.push(["/admin", isOwner ? "Admin" : "Academy", "admin"]);
