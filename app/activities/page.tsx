@@ -56,6 +56,16 @@ export default async function ActivitiesPage() {
         </p>
       </div>
 
+      <Link href="/games" className="card" style={{ display: "block", textDecoration: "none" }}>
+        <div className="spread">
+          <h3>Symbol Sprint · practice game</h3>
+          <span className="pill">Not graded</span>
+        </div>
+        <p className="small muted" style={{ margin: "4px 0 0" }}>
+          Three quick rounds on the note-taking symbols and abbreviations of Coursebook Unit 5: Match it, Fill the gap and Shrink it.
+        </p>
+      </Link>
+
       {!course ? (
         <div className="card">
           <p className="small muted">You are not in a class yet. Open the class link your teacher shared to join.</p>
