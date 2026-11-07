@@ -14,7 +14,7 @@ import type { Role } from "@/app/_lib/types";
  *   record    violet     my recordings
  *   share     pink       shared with me
  *   assess    yellow     the rubric
- *   teach     periwinkle my classes
+ *   teach     periwinkle my classes, teacher videos
  *   admin     coral      academy administration
  *   progress  green      my progress (an action item, always filled)
  */
@@ -24,7 +24,8 @@ type Item = [href: string, label: string, tone: Tone, cta?: boolean];
 /**
  * The header links, laid out like the original practice studio:
  * Home · Guide · Units · Coursebook · Activities · Games · My recordings · Shared with me · Rubric · My progress.
- * Staff get the same course pages (as a student preview) plus their own.
+ * Staff get the same course pages (as a student preview) plus their own:
+ * My classes and Teacher videos.
  */
 export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?: boolean }) {
   const path = usePathname() ?? "/";
@@ -54,6 +55,7 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
       ["/activities", "Activities", "practice"],
       ["/games", "Games", "practice"],
       ["/teach", "My classes", "teach"],
+      ["/videos", "Teacher videos", "teach"],
     ];
     if (role === "admin") items.push(["/admin", isOwner ? "Admin" : "Academy", "admin"]);
     items.push(["/rubric", "Rubric", "assess"]);
