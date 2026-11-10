@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentProfile, homeFor } from "@/app/_lib/supabase";
-import { loadVideos, videoCourses, withLinks } from "@/app/_lib/staff-videos";
+import { canManage, loadVideos, videoCourses, withLinks } from "@/app/_lib/staff-videos";
 import { megabytes } from "@/app/_lib/staff-video-types";
 import StaffVideoUpload from "@/app/_components/StaffVideoUpload";
 import StaffVideoActions from "@/app/_components/StaffVideoActions";
@@ -12,9 +12,11 @@ const day = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { timeZone: "Asia/Riyadh", day: "numeric", month: "short", year: "numeric" });
 
 /**
- * Teacher videos: for teachers and administrators only. A teacher sees the
- * videos of the courses they teach; an administrator sees every course's and
- * adds or removes them. Students are sent home and cannot open the files.
+ * Teacher videos: for teachers and administrators only. A teacher sees and
+ * adds videos for the courses they teach, and renames or deletes the ones they
+ * added; an administrator does this for every course and every video.
+ * Students never get the tab, are sent home from this page, and cannot open
+ * the files.
  */
 export default async function TeacherVideos() {
   const profile = await currentProfile();
@@ -39,14 +41,14 @@ export default async function TeacherVideos() {
         </p>
       </div>
 
-      {isAdmin && courses.length > 0 && <StaffVideoUpload courses={courses} />}
+      {courses.length > 0 && <StaffVideoUpload courses={courses} isAdmin={isAdmin} />}
 
       {!courses.length ? (
         <div className="card">
           <p className="small muted" style={{ margin: 0 }}>
             {isAdmin
               ? "There is no course yet. Videos are added to a course."
-              : "You will see videos here for the courses you teach. Open a class under My classes first."}
+              : "You can add and watch videos here for the courses you teach. Open a class under My classes first."}
           </p>
         </div>
       ) : (
@@ -73,13 +75,13 @@ export default async function TeacherVideos() {
                       {megabytes(v.size)} · added {day(v.added)}
                       {v.by ? ` by ${v.by}` : ""}
                     </p>
-                    {isAdmin && <StaffVideoActions courseId={course.id} id={v.id} title={v.title} note={v.note} />}
+                    {canManage(profile, v) && <StaffVideoActions courseId={course.id} id={v.id} title={v.title} note={v.note} />}
                   </div>
                 ))}
               </div>
             ) : (
               <p className="small muted" style={{ marginTop: 6 }}>
-                No videos for this course yet.{isAdmin ? " Add one above." : ""}
+                No videos for this course yet. Add one above.
               </p>
             )}
           </div>
