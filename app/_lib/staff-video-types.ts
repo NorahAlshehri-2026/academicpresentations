@@ -1,5 +1,6 @@
 /**
- * Teacher videos: videos that only teachers and administrators can watch.
+ * Teacher videos: videos that only teachers and administrators can add and
+ * watch. Students never see them.
  * Shared by the server and the upload screen, so nothing here is secret.
  */
 export type StaffVideo = {
@@ -11,7 +12,10 @@ export type StaffVideo = {
   type: string;
   size: number;
   added: string;
+  /** the uploader's name, as shown under the video */
   by: string;
+  /** the uploader's profile id: they, and administrators, may rename or delete it */
+  byId?: string;
 };
 
 export type StaffVideoIndex = { version: 1; items: StaffVideo[] };

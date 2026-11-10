@@ -14,6 +14,9 @@ import { isVideoId, type StaffVideo, type StaffVideoIndex, type StaffVideoShown 
  * out short-lived links only to the teachers of that course and to
  * administrators.
  *
+ * Teachers add videos to the courses they teach; administrators to any
+ * course. Whoever added a video, and any administrator, can rename or delete it.
+ *
  *   media/00000000-0000-0000-0000-000000000000/<course_id>/videos/index.json
  *   media/00000000-0000-0000-0000-000000000000/<course_id>/videos/<id>.mp4 …
  */
@@ -99,4 +102,9 @@ export async function videoCourses(profile: Profile): Promise<{ id: string; titl
   }
   for (const c of (owned ?? []) as any[]) found.set(c.id, { id: c.id, title: c.title });
   return Array.from(found.values()).sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/** Whoever added a video may rename or delete it; administrators may change any. */
+export function canManage(profile: Profile, video: { byId?: string }) {
+  return profile.role === "admin" || (profile.role === "teacher" && !!video.byId && video.byId === profile.id);
 }
