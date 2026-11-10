@@ -42,10 +42,11 @@ function sendFile(url: string, file: File, type: string, onProgress: (sent: numb
 }
 
 /**
- * Administrators add a teacher video to a course. Only that course's teachers
- * and administrators will see it under Teacher videos.
+ * Teachers (for the courses they teach) and administrators (for any course)
+ * add a teacher video. Only that course's teachers and administrators will see
+ * it under Teacher videos; students never do.
  */
-export default function StaffVideoUpload({ courses }: { courses: { id: string; title: string }[] }) {
+export default function StaffVideoUpload({ courses, isAdmin = false }: { courses: { id: string; title: string }[]; isAdmin?: boolean }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
@@ -117,7 +118,7 @@ export default function StaffVideoUpload({ courses }: { courses: { id: string; t
       const finish = await post({ step: "finish", courseId, id, file: stored, title, note });
       if (!finish.ok) throw new Error(finish.out.error ?? "The video could not be added to the list.");
 
-      setMsg({ ok: true, text: `Added “${title.trim()}”. Its course's teachers can watch it now.` });
+      setMsg({ ok: true, text: `Added “${title.trim()}”. The course's teachers and administrators can watch it now.` });
       setFile(null);
       setTitle("");
       setNote("");
@@ -135,8 +136,9 @@ export default function StaffVideoUpload({ courses }: { courses: { id: string; t
     <div className="card">
       <h3>Add a video</h3>
       <p className="small muted" style={{ margin: "4px 0 0" }}>
-        MP4, WebM or MOV, up to {VIDEO_MAX_MB} MB each. Only the teachers of the course you choose, and administrators, will
-        see it.
+        MP4, WebM or MOV, up to {VIDEO_MAX_MB} MB each. Only the teachers of {courses.length > 1 ? "the course you choose" : "this course"},
+        and administrators, will see it. Students never see teacher videos.
+        {isAdmin ? "" : " You can rename or delete the videos you add."}
       </p>
       <form onSubmit={upload}>
         {courses.length > 1 ? (

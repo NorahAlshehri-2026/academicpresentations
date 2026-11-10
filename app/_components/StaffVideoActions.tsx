@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/** Administrators rename or delete a teacher video. */
+/** The teacher who added a video, or an administrator, renames or deletes it. */
 export default function StaffVideoActions({ courseId, id, title, note }: { courseId: string; id: string; title: string; note: string }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
