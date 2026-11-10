@@ -1,36 +1,44 @@
 import { NextResponse } from "next/server";
-import { currentProfile, serverClient } from "@/app/_lib/supabase";
-import { loadVideos, removeFile, saveVideos, uploadLink, uploadedSize } from "@/app/_lib/staff-videos";
+import { currentProfile } from "@/app/_lib/supabase";
+import { canManage, loadVideos, removeFile, saveVideos, uploadLink, uploadedSize, videoCourses } from "@/app/_lib/staff-videos";
 import { VIDEO_MAX_MB, VIDEO_TYPES, isVideoId, megabytes, videoExt } from "@/app/_lib/staff-video-types";
 
 /**
- * Teacher videos, administrators only:
+ * Teacher videos, for teachers and administrators only (students are refused):
  *   POST { step: "start", courseId, name, size }   → a link to upload the file to
  *   POST { step: "finish", courseId, id, file, title, note } → adds it to the list
  *   PATCH { courseId, id, title, note }             → renames it
  *   DELETE { courseId, id }                         → removes it and its file
+ * A teacher may add videos only to a course they teach, and rename or delete
+ * only the videos they added. An administrator may do all of it for any course.
  * The file goes straight from the browser to storage, because Vercel cannot
  * carry a request larger than a few MB.
  */
-async function admin(body: any) {
+async function staff(body: any) {
   const profile = await currentProfile();
-  if (!profile || profile.role !== "admin") {
-    return { error: NextResponse.json({ error: "Only administrators can change teacher videos." }, { status: 403 }) };
+  if (!profile || (profile.role !== "admin" && profile.role !== "teacher")) {
+    return { error: NextResponse.json({ error: "Only teachers and administrators can add or change teacher videos." }, { status: 403 }) };
   }
   const courseId = typeof body?.courseId === "string" ? body.courseId : "";
-  const { data: course } = courseId
-    ? await serverClient().from("courses").select("id").eq("id", courseId).maybeSingle()
-    : { data: null };
-  if (!course) return { error: NextResponse.json({ error: "Choose a course for the video." }, { status: 400 }) };
+  const allowed = courseId ? (await videoCourses(profile)).some((c) => c.id === courseId) : false;
+  if (!allowed) {
+    return {
+      error: NextResponse.json(
+        { error: profile.role === "admin" ? "Choose a course for the video." : "You can add videos only to a course you teach." },
+        { status: courseId ? 403 : 400 }
+      ),
+    };
+  }
   return { profile, courseId };
 }
 
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
+const NOT_YOURS = "Only the teacher who added this video, or an administrator, can change it.";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const found = await admin(body);
+  const found = await staff(body);
   if (found.error) return found.error;
   const { profile, courseId } = found;
 
@@ -62,8 +70,20 @@ export async function POST(request: Request) {
     const size = await uploadedSize(courseId, file);
     if (size == null) return fail("The video did not arrive in storage. Please upload it again.");
 
-    const items = (await loadVideos(courseId)).filter((v) => v.id !== id);
-    items.push({ id, title, note, file, type: VIDEO_TYPES[videoExt(file)], size, added: new Date().toISOString(), by: profile.full_name });
+    const items = await loadVideos(courseId);
+    // a video already on the list belongs to whoever added it; it cannot be claimed again
+    if (items.some((v) => v.id === id)) return fail("That video is already on the list.", 409);
+    items.push({
+      id,
+      title,
+      note,
+      file,
+      type: VIDEO_TYPES[videoExt(file)],
+      size,
+      added: new Date().toISOString(),
+      by: profile.full_name,
+      byId: profile.id,
+    });
     const { error } = await saveVideos(courseId, items);
     if (error) {
       console.error("teacher videos: save list", error);
@@ -77,11 +97,12 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
-  const found = await admin(body);
+  const found = await staff(body);
   if (found.error) return found.error;
   const items = await loadVideos(found.courseId);
   const video = items.find((v) => v.id === body?.id);
   if (!video) return fail("That video is no longer there.", 404);
+  if (!canManage(found.profile, video)) return fail(NOT_YOURS, 403);
   const title = clean(body?.title, 120);
   if (!title) return fail("Give the video a title.");
   video.title = title;
@@ -93,11 +114,12 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   const body = await request.json().catch(() => null);
-  const found = await admin(body);
+  const found = await staff(body);
   if (found.error) return found.error;
   const items = await loadVideos(found.courseId);
   const video = items.find((v) => v.id === body?.id);
   if (!video) return NextResponse.json({ ok: true });
+  if (!canManage(found.profile, video)) return fail(NOT_YOURS, 403);
   const { error } = await saveVideos(found.courseId, items.filter((v) => v.id !== video.id));
   if (error) return fail("The video could not be removed. Please try again.", 500);
   await removeFile(found.courseId, video.file);
