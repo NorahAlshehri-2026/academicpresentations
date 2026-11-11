@@ -36,7 +36,10 @@ export default async function TeacherDashboard() {
       <div className="card">
         <div className="spread">
           <h3>Teaching</h3>
-          <Link className="btn gold" href="/teach/sections/new">Open a class</Link>
+          <div className="row" style={{ gap: 8 }}>
+            <Link className="btn sm act k-post" href="/#announcements">Post an announcement</Link>
+            <Link className="btn gold" href="/teach/sections/new">Open a class</Link>
+          </div>
         </div>
         <p className="small muted" style={{ marginTop: 6 }}>
           {sections?.length
@@ -82,9 +85,9 @@ export default async function TeacherDashboard() {
               >
                 Duplicate for another section
               </Link>
-              <Link className="btn sm act k-preview" href={`/learn/${s.courses?.id ?? ""}`}>
+              <a className="btn sm act k-preview" href={`/preview?to=on&next=${encodeURIComponent(`/learn/${s.courses?.id ?? ""}`)}`}>
                 Student preview
-              </Link>
+              </a>
               <Link className="btn sm act k-gradebook" href={`/teach/sections/${s.id}`}>
                 Open gradebook
               </Link>

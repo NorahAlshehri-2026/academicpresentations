@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { SOURCE_NAMES, clipName, megabytes, type VideoSetShown } from "@/app/_lib/staff-video-types";
+import { MAX_REFS, SOURCE_NAMES, clipName, megabytes, type VideoSetShown } from "@/app/_lib/staff-video-types";
+import { REFS_HINT } from "./LectureRefs";
 
 /**
  * The teacher who added a recorded lecture, or an administrator, renames it,
@@ -12,6 +13,7 @@ export default function StaffVideoActions({ courseId, set, onClose }: { courseId
   const router = useRouter();
   const [title, setTitle] = useState(set.title);
   const [note, setNote] = useState(set.note);
+  const [refs, setRefs] = useState((set.refs ?? []).join("\n"));
   const [labels, setLabels] = useState<Record<string, string>>(() => Object.fromEntries(set.clips.map((c) => [c.id, c.label])));
   const [order, setOrder] = useState(() => set.clips.map((c) => c.id));
   const [busy, setBusy] = useState(false);
@@ -73,13 +75,25 @@ export default function StaffVideoActions({ courseId, set, onClose }: { courseId
       className="sv-edit"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (await send("PATCH", { title, note, labels, order: ids })) onClose();
+        if (await send("PATCH", { title, note, refs, labels, order: ids })) onClose();
       }}
     >
       <label className="fld" htmlFor={`t-${set.id}`}>Lecture title</label>
       <input id={`t-${set.id}`} value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} disabled={busy} />
       <label className="fld" htmlFor={`n-${set.id}`}>Note for teachers</label>
       <textarea id={`n-${set.id}`} rows={2} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} disabled={busy} />
+      <label className="fld" htmlFor={`r-${set.id}`}>References (shown at the bottom of the lecture)</label>
+      <textarea
+        id={`r-${set.id}`}
+        rows={Math.min(10, Math.max(3, refs.split("\n").length + 1))}
+        value={refs}
+        onChange={(e) => setRefs(e.target.value)}
+        disabled={busy}
+        placeholder={"Author, A. A., & Author, B. B. (2025). Title of the article. *Journal Name*, *12*(3), 45–67. https://doi.org/…"}
+      />
+      <p className="tiny muted" style={{ margin: "4px 0 0" }}>
+        {REFS_HINT} Up to {MAX_REFS}.
+      </p>
 
       <div className="fld" style={{ marginTop: 16 }}>Videos, in the order they play</div>
       {ids.map((id, i) => {

@@ -46,7 +46,7 @@ export default async function AdminDashboard() {
           <span className="pill">{sections?.length ?? 0} classes</span>
         </div>
         <div className="row" style={{ marginTop: 10 }}>
-          <Link className="btn ghost sm" href="/courses">Student preview of the course</Link>
+          <a className="btn ghost sm" href="/preview?to=on&next=%2F">Student preview</a>
           <Link className="btn ghost sm" href="/admin/coursebook">Coursebook files</Link>
         </div>
         <p className="tiny muted" style={{ marginTop: 10 }}>

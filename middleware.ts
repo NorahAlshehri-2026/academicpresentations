@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasAcceptedTerms } from "@/app/_lib/terms";
+import { PREVIEW_COOKIE, isStaffOnlyPath } from "@/app/_lib/preview-cookie";
 
 /**
  * Refreshes the session on every request and keeps signed-out visitors out of
@@ -66,6 +67,17 @@ export async function middleware(request: NextRequest) {
       response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
       return redirect;
     }
+  }
+
+  // Student preview ends when a teacher or administrator opens a staff-only
+  // page (My classes, Recorded lectures, Admin): those pages are never part
+  // of what a student sees.
+  if (request.cookies.get(PREVIEW_COOKIE)?.value === "1" && isStaffOnlyPath(path)) {
+    request.cookies.delete(PREVIEW_COOKIE);
+    const kept = response;
+    response = NextResponse.next({ request });
+    kept.cookies.getAll().forEach((c) => response.cookies.set(c));
+    response.cookies.set(PREVIEW_COOKIE, "", { path: "/", maxAge: 0 });
   }
 
   return response;

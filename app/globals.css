@@ -1099,3 +1099,164 @@ div.fld { font-size: 13px; font-weight: 600; margin: 12px 0 5px; color: var(--in
   .stc-parts { padding: 10px 8px 14px; }
   .stc-parts button { font-size: 13px; padding: 8px 12px; }
 }
+
+/* =====================================================================
+   Student preview (November 2026): a teacher or administrator sees the
+   whole site as a student does. "Student preview" in the header turns it
+   on; the gold strip under the header and "Exit preview" turn it off.
+   ===================================================================== */
+:root { --pv: #f2b82e; --pv-ink: #2a1d00; }
+.sitenav a.pv-start {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  color: #fff; background: transparent; border: 1px dashed rgba(255, 255, 255, .7); font-weight: 700;
+}
+.sitenav a.pv-start::before {
+  content: ""; width: 14px; height: 14px; flex: none; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.sitenav a.pv-start:hover { color: var(--pv-ink); background: var(--pv); border: 1px solid var(--pv); }
+.sitenav a.pv-exit,
+:root:not([data-theme="light"]) .sitenav a.pv-exit {
+  display: inline-flex; align-items: center; white-space: nowrap;
+  background: var(--pv); color: var(--pv-ink); border: 1px solid var(--pv); font-weight: 800;
+}
+.sitenav a.pv-exit:hover { filter: brightness(1.06); color: var(--pv-ink); background: var(--pv); }
+
+.pv-bar { background: var(--pv); color: var(--pv-ink); }
+.pv-bar .pv-inner {
+  max-width: 1020px; margin: 0 auto; padding: 8px 16px;
+  display: flex; align-items: center; gap: 10px; font-size: 13.5px; line-height: 1.4;
+}
+.pv-eye { flex: none; display: grid; place-items: center; }
+.pv-text { flex: 1; min-width: 0; }
+.pv-bar-exit {
+  flex: none; color: var(--pv-ink); font-weight: 800; text-decoration: none; white-space: nowrap;
+  padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, .55); border: 1px solid rgba(42, 29, 0, .25);
+}
+.pv-bar-exit:hover { background: #fff; }
+@media (max-width: 760px) {
+  .pv-bar .pv-inner { padding: 7px 12px; font-size: 12.5px; flex-wrap: wrap; }
+  .pv-eye { display: none; }
+}
+
+/* =====================================================================
+   Announcements: posted by teachers (their classes) and administrators
+   (any class, or everyone). Burnt orange, a megaphone, newest first.
+   ===================================================================== */
+.btn.act.k-post { --act: #b5480b; }
+.an-panel {
+  --an: #b5480b;
+  margin: 0 0 14px; padding: 16px 18px; border-radius: var(--radius);
+  background: color-mix(in srgb, var(--an) 5%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--an) 26%, var(--rule)); border-left: 6px solid var(--an);
+}
+.an-panel.staff { margin-top: 14px; background: var(--card); }
+.an-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.an-head h3 { font-size: 19px; margin: 0; }
+.an-ico {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--an); color: #fff;
+}
+.an-count {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--an) 14%, var(--card)); color: color-mix(in srgb, var(--an) 85%, var(--text));
+}
+.an-item { border-top: 1px solid color-mix(in srgb, var(--an) 18%, var(--rule)); margin-top: 12px; padding-top: 12px; }
+.an-head + .an-item { border-top: 0; padding-top: 4px; }
+.an-item.ended { opacity: .62; }
+.an-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.an-top h4 { margin: 0; font-size: 16.5px; color: var(--text); overflow-wrap: anywhere; }
+.an-new {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 4px; background: var(--an); color: #fff;
+}
+.an-meta { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.an-meta b { color: var(--text); font-weight: 600; }
+.an-body { margin: 6px 0 0; font-size: 15px; white-space: pre-line; overflow-wrap: anywhere; }
+.an-body a { color: color-mix(in srgb, var(--an) 80%, var(--text)); font-weight: 600; }
+.an-more { margin-top: 12px; }
+.an-more summary { cursor: pointer; font-size: 13.5px; font-weight: 700; color: color-mix(in srgb, var(--an) 85%, var(--text)); }
+.an-empty { margin: 12px 0 0; }
+.an-form { margin-top: 12px; padding: 14px; border-radius: 12px; background: var(--tint); }
+.an-form input:not([type="checkbox"]), .an-form textarea, .an-form select { background: var(--card); }
+.an-form textarea { resize: vertical; min-height: 96px; }
+.an-classes { display: grid; gap: 8px; }
+.an-course { border: 1px solid var(--rule); border-radius: 10px; padding: 8px 12px; background: var(--card); }
+.an-course-hd { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 800; color: var(--muted); padding-bottom: 2px; }
+.an-check { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; cursor: pointer; }
+.an-check input { width: 18px; height: 18px; padding: 0; flex: none; accent-color: var(--an, #b5480b); }
+.an-check.an-all { padding: 8px 12px; margin-bottom: 8px; border-radius: 10px; background: var(--card); border: 1px solid var(--rule); }
+@media (max-width: 760px) {
+  .an-panel { padding: 14px; }
+  .an-head .btn { margin-left: 0 !important; width: 100%; }
+}
+
+/* =====================================================================
+   The calendar on Home: a month of deadlines and what is coming up
+   ===================================================================== */
+.hc { margin-top: 14px; }
+.hc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hc-head h3 { font-size: 19px; margin: 0; }
+.hc-head .btn { margin-left: auto; text-decoration: none; }
+.hc-ico {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: #0b6e99; color: #fff;
+}
+.hc-month { margin-top: 12px; }
+button.hc-day {
+  font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%;
+}
+button.hc-day:hover { border-color: color-mix(in srgb, var(--forest) 45%, var(--rule)); }
+.hc-day.picked { border-color: #0b6e99; box-shadow: inset 0 0 0 2px #0b6e99; }
+.hc .calv-ev { cursor: inherit; }
+.hc .calv-ev.past { opacity: 1; border-left-color: #c2392b; background: color-mix(in srgb, #c2392b 12%, var(--card)); }
+.hc .calv-ev.past i { color: #c2392b; }
+.hc .calv-ev.done { opacity: .6; text-decoration: line-through; text-decoration-thickness: 1px; }
+.hc-moreday { font-size: 11px; font-weight: 700; color: var(--muted); padding: 0 4px; }
+.hc-list { margin-top: 14px; }
+.hc-list-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.hc-list-hd b { font-size: 14.5px; }
+.hc-list ul { list-style: none; margin: 6px 0 4px; padding: 0; }
+.hc-row {
+  display: flex; align-items: center; gap: 12px; padding: 9px 10px; margin-top: 6px; border-radius: 10px;
+  border: 1px solid var(--rule); border-left: 4px solid var(--unit, var(--forest)); background: var(--card);
+}
+.hc-date { flex: none; width: 92px; display: flex; flex-direction: column; line-height: 1.25; }
+.hc-date b { font-size: 13.5px; }
+.hc-date i { font-style: normal; font-size: 12px; color: var(--muted); }
+.hc-what { flex: 1; min-width: 0; font-size: 14.5px; }
+.hc-what a { font-weight: 700; text-decoration: none; color: var(--text); }
+.hc-what a:hover { text-decoration: underline; }
+.hc-note { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.hc-pill {
+  flex: none; font-size: 11.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  background: color-mix(in srgb, #4338ca 11%, var(--card)); color: color-mix(in srgb, #4338ca 85%, var(--text));
+}
+.hc-pill.soon { background: color-mix(in srgb, #d08a12 16%, var(--card)); color: color-mix(in srgb, #b7700d 85%, var(--text)); }
+.hc-pill.past { background: color-mix(in srgb, #c2392b 14%, var(--card)); color: color-mix(in srgb, #c2392b 85%, var(--text)); }
+.hc-pill.done { background: color-mix(in srgb, #1f9d63 15%, var(--card)); color: color-mix(in srgb, #1f9d63 80%, var(--text)); }
+.hc-row.done { opacity: .75; }
+.hc-empty { margin: 12px 0 0; }
+/* staff: a deadline that has passed is simply past, not overdue */
+.hc.staff .calv-ev.past { opacity: .55; border-left-color: var(--unit); background: color-mix(in srgb, var(--unit) 14%, var(--card)); }
+.hc.staff .calv-ev.past i { color: var(--unit); }
+.hc.staff .hc-pill.past { background: var(--tint); color: var(--muted); }
+@media (max-width: 760px) {
+  .hc .calv-ev.past { background: #c2392b; }
+  .hc.staff .calv-ev.past { background: var(--unit); }
+  .hc-head .btn { margin-left: 0; width: 100%; justify-content: center; }
+  .hc-row { flex-wrap: wrap; gap: 4px 10px; }
+  .hc-date { width: auto; flex-direction: row; gap: 6px; align-items: baseline; }
+  .hc-what { flex-basis: 100%; order: 3; }
+  .hc-pill { margin-left: auto; }
+  .hc-moreday { display: none; }
+}
+
+/* a recorded lecture's references (APA 7th edition): alphabetical, hanging indent */
+.sv-refs { margin-top: 16px; padding: 12px 16px 6px; border-radius: 12px; background: var(--tint); border: 1px solid var(--rule); }
+.sv-refs h5 { margin: 0 0 6px; font-size: 14px; font-weight: 800; text-align: center; color: var(--text); }
+.sv-refs ul { list-style: none; margin: 0; padding: 0; }
+.sv-refs li { padding-left: 2.2em; text-indent: -2.2em; margin: 0 0 10px; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.sv-refs a { color: var(--green-btn, var(--teal)); }
+.sv-edit textarea[id^="r-"], #sv-refs { font-size: 13.5px; line-height: 1.5; }

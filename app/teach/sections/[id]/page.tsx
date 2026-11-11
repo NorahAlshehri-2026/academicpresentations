@@ -89,9 +89,13 @@ export default async function Gradebook({ params }: { params: { id: string } }) 
         </div>
         <div className="meta">{sec.term} · Teacher: {sec.teacher?.full_name ?? "—"}</div>
         <div className="row" style={{ marginTop: 10, gap: 8 }}>
-          <Link className="btn sm act" style={{ ["--act" as any]: "#1f7fa8" }} href={`/learn/${sec.course_id}`}>
+          <a
+            className="btn sm act"
+            style={{ ["--act" as any]: "#1f7fa8" }}
+            href={`/preview?to=on&next=${encodeURIComponent(`/learn/${sec.course_id}`)}`}
+          >
             Student preview
-          </Link>
+          </a>
           <a className="btn sm act" style={{ ["--act" as any]: "#1d7a45" }} href={`/teach/sections/${sec.id}/workbook`} download>
             ⬇ Download progress workbook (Excel)
           </a>

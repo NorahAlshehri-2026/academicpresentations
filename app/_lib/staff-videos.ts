@@ -86,7 +86,12 @@ export async function loadSets(courseId: string, strict = false): Promise<VideoS
   const sets: VideoSet[] = Array.isArray(parsed?.sets)
     ? parsed.sets
         .filter((s: any) => s && typeof s.id === "string" && typeof s.title === "string" && Array.isArray(s.clips))
-        .map((s: any) => ({ ...s, note: typeof s.note === "string" ? s.note : "", clips: s.clips.filter(validClip) }))
+        .map((s: any) => ({
+          ...s,
+          note: typeof s.note === "string" ? s.note : "",
+          refs: Array.isArray(s.refs) ? s.refs.filter((r: unknown) => typeof r === "string") : [],
+          clips: s.clips.filter(validClip),
+        }))
         .filter((s: VideoSet) => s.clips.length > 0)
     : Array.isArray(parsed?.items)
       ? fromFirstVersion(parsed.items)

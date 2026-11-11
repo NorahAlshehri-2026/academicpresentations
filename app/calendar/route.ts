@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
  *   /calendar?section=<id>               every deadline of one class
  *   /calendar?section=<id>&lesson=<id>   one deadline
  *   /calendar                            all deadlines of the classes I am in
+ *   /calendar?scope=teaching             staff: all deadlines of the classes I teach (administrators: every class)
  *
  * What a person can download is decided by the database policies: a class's
  * teacher, administrators and the class's own students.
@@ -27,6 +28,12 @@ export async function GET(request: Request) {
   let sectionIds: string[];
   if (sectionParam) {
     sectionIds = [sectionParam];
+  } else if (url.searchParams.get("scope") === "teaching" && profile.role !== "student") {
+    // the Home calendar for staff: the classes I teach (administrators: every class)
+    let q = supabase.from("sections").select("id");
+    if (profile.role === "teacher") q = q.eq("teacher_id", profile.id);
+    const { data: secs } = await q;
+    sectionIds = ((secs ?? []) as any[]).map((s) => s.id);
   } else {
     const { data: enr } = await supabase
       .from("enrolments")

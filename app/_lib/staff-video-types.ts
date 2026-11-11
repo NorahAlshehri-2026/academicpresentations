@@ -62,9 +62,72 @@ export type VideoSet = {
   by: string;
   /** their profile id: they, and administrators, may change or delete it */
   byId?: string;
+  /**
+   * The lecture's reference list (APA 7th edition), one reference per entry.
+   * *Asterisks* mark italics (the journal name and volume); links are shown
+   * as links. Listed at the bottom of the lecture in alphabetical order.
+   */
+  refs?: string[];
 };
 
 export type StaffVideoIndex = { version: 2; sets: VideoSet[] };
+
+/** The most references one lecture can list, and the longest one reference can be. */
+export const MAX_REFS = 40;
+export const REF_MAX = 800;
+
+/** "*Climate Policy*" → "Climate Policy": the text without its italic marks. */
+const plainRef = (r: string) => r.replace(/\*/g, "").trim();
+
+/**
+ * References as typed in the box: one per line (blank lines are ignored),
+ * trimmed, without repeats, in APA order (alphabetical by the first author's
+ * surname, which is how each reference begins).
+ */
+export function parseRefs(text: unknown): string[] {
+  const lines = (typeof text === "string" ? text : Array.isArray(text) ? text.join("\n") : "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .map((l) => l.slice(0, REF_MAX));
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const l of lines) {
+    const k = plainRef(l).toLowerCase();
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push(l);
+    }
+  }
+  return sortRefs(out).slice(0, MAX_REFS);
+}
+
+/** Alphabetical, as APA orders a reference list ("de Coninck" sorts under D, as typed). */
+export const sortRefs = (refs: string[]) =>
+  [...refs].sort((a, b) => plainRef(a).localeCompare(plainRef(b), "en", { sensitivity: "base", numeric: true }));
+
+/** One reference split into plain text, *italic* text and links, for display. */
+export function refParts(ref: string): { text: string; italic?: boolean; href?: string }[] {
+  const out: { text: string; italic?: boolean; href?: string }[] = [];
+  const pieces = ref.split(/(\*[^*]+\*)/g).filter(Boolean);
+  for (const piece of pieces) {
+    if (/^\*[^*]+\*$/.test(piece)) {
+      out.push({ text: piece.slice(1, -1), italic: true });
+      continue;
+    }
+    const re = /\bhttps?:\/\/[^\s<>"]+[^\s<>".,;:)]/gi;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(piece))) {
+      if (m.index > last) out.push({ text: piece.slice(last, m.index) });
+      out.push({ text: m[0], href: m[0] });
+      last = m.index + m[0].length;
+    }
+    if (last < piece.length) out.push({ text: piece.slice(last) });
+  }
+  return out;
+}
 
 /** What a teacher's browser receives: each video with the address that plays it. */
 export type ClipShown = Clip & { src: string };

@@ -14,6 +14,7 @@ import {
   MAX_CLIPS,
   MAX_SETS,
   VIDEO_MAX_MB,
+  parseRefs,
   VIDEO_TYPES,
   isVideoId,
   megabytes,
@@ -31,7 +32,7 @@ import {
  *        → a new title with its videos, or more videos for an existing title.
  *          clips: [{ kind: "file", id, file, label } | { kind: "link", url, label }]
  *   POST { step: "discard", courseId, files }             → removes uploads that were never saved
- *   PATCH { courseId, setId, title, note, labels?, order? } → renames, relabels, reorders
+ *   PATCH { courseId, setId, title, note, refs?, labels?, order? } → renames, relabels, reorders, sets the references
  *   DELETE { courseId, setId, clipId? }                   → removes one video, or the title and all its videos
  * A teacher may add titles only to a course they teach, and change or delete
  * only the titles they added. An administrator may do all of it for any course.
@@ -167,6 +168,7 @@ export async function POST(request: Request) {
         id: crypto.randomUUID(),
         title,
         note: clean(body?.note, 500),
+        refs: parseRefs(body?.refs),
         clips,
         added: now,
         by: profile.full_name,
@@ -208,6 +210,8 @@ export async function PATCH(request: Request) {
   if (!title) return fail("Give the lecture a title.");
   set.title = title;
   set.note = clean(body?.note, 500);
+  // the reference list, when the form sends one (one reference per line)
+  if (body?.refs !== undefined) set.refs = parseRefs(body.refs);
 
   const labels = body?.labels && typeof body.labels === "object" ? body.labels : {};
   for (const c of set.clips) if (typeof labels[c.id] === "string") c.label = clean(labels[c.id], 80);
