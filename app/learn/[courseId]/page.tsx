@@ -4,6 +4,7 @@ import { currentProfile, serverClient } from "@/app/_lib/supabase";
 import { unitMeta, MAX_ATTEMPTS } from "@/app/_lib/activities";
 import { mmss } from "@/app/_lib/format";
 import { PreviewBanner } from "@/app/_components/StudentPreview";
+import { seesAsStudent } from "@/app/_lib/preview";
 
 const KIND_LABEL: Record<string, string> = {
   reading: "Read",
@@ -59,7 +60,8 @@ export default async function CoursePage({ params }: { params: { courseId: strin
   const units = Array.from(new Set((lessons ?? []).map((l: any) => l.unit))).sort((a, b) => a - b);
   const total = lessons?.length ?? 0;
   const doneCount = (lessons ?? []).filter((l: any) => completed.has(l.id)).length;
-  const student = profile.role === "student";
+  // in the student preview, staff see the progress bar a student sees
+  const student = seesAsStudent(profile);
 
   return (
     <>
