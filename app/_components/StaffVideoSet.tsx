@@ -8,9 +8,9 @@ import ShowToClass from "./ShowToClass";
 import { MAX_CLIPS, SOURCE_NAMES, clipName, megabytes, type VideoSetShown } from "@/app/_lib/staff-video-types";
 
 /**
- * One title on the Teacher videos page: its videos side by side, "Show to
- * class", and (for the teacher who added it, and administrators) adding more
- * videos, editing and deleting.
+ * One recorded lecture on the Recorded lectures page: its videos side by side,
+ * "Show to class", and (for the teacher who added it, and administrators)
+ * adding more videos, editing and deleting.
  */
 export default function StaffVideoSet({
   set,

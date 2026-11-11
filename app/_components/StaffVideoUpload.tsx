@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { browserClient } from "@/app/_lib/supabase-browser";
 import {
   MAX_CLIPS,
+  MAX_SETS,
   SOURCE_NAMES,
   VIDEO_MAX_MB,
   VIDEO_TYPES,
@@ -54,8 +55,8 @@ const blank = (key: number): Slot => ({ key, mode: "file", file: null, url: "", 
 
 /**
  * Teachers (for the courses they teach) and administrators (for any course)
- * add a title with up to three videos under it, or (into) add more videos to
- * a title that has room. Each video is a file (up to the storage limit) or a
+ * add a recorded lecture with up to three videos, or (into) add more videos to
+ * a lecture that has room. A course holds up to six lectures. Each video is a file (up to the storage limit) or a
  * link to a bigger video on YouTube, Google Drive, Vimeo or OneDrive. Only
  * that course's teachers and administrators see it; students never do.
  */
@@ -65,14 +66,17 @@ export default function StaffVideoUpload({
   into,
   onDone,
 }: {
-  courses: { id: string; title: string }[];
+  /** lectures: how many recorded lectures the course has now */
+  courses: { id: string; title: string; lectures?: number }[];
   isAdmin?: boolean;
   into?: { courseId: string; setId: string; title: string; room: number };
   onDone?: () => void;
 }) {
   const router = useRouter();
   const next = useRef(1);
-  const [courseId, setCourseId] = useState(into?.courseId ?? courses[0]?.id ?? "");
+  const isFull = (c: { lectures?: number }) => (c.lectures ?? 0) >= MAX_SETS;
+  const open = courses.filter((c) => !isFull(c));
+  const [courseId, setCourseId] = useState(into?.courseId ?? open[0]?.id ?? courses[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [slots, setSlots] = useState<Slot[]>([blank(0)]);
@@ -83,6 +87,13 @@ export default function StaffVideoUpload({
 
   const room = into ? into.room : MAX_CLIPS;
   const total = slots.reduce((n, s) => n + (s.mode === "file" && s.file ? s.file.size : 0), 0);
+
+  // once a course fills up, the form moves on to one that still has room
+  useEffect(() => {
+    if (into) return;
+    const now = courses.find((c) => c.id === courseId);
+    if ((!now || isFull(now)) && open[0] && open[0].id !== courseId) setCourseId(open[0].id);
+  }, [courses, courseId, into, open]);
 
   // leaving the page stops an upload part-way
   useEffect(() => {
@@ -122,7 +133,7 @@ export default function StaffVideoUpload({
     e.preventDefault();
     if (busy) return;
     setMsg(null);
-    if (!into && !title.trim()) return setMsg({ ok: false, text: "Give the title a name." });
+    if (!into && !title.trim()) return setMsg({ ok: false, text: "Give the lecture a title." });
 
     // check every video before anything is uploaded
     const checked = slots.map((s) => {
@@ -204,19 +215,21 @@ export default function StaffVideoUpload({
               <label className="fld" htmlFor="sv-course">Course</label>
               <select id="sv-course" value={courseId} onChange={(e) => setCourseId(e.target.value)} disabled={busy}>
                 {courses.map((c) => (
-                  <option key={c.id} value={c.id}>{c.title}</option>
+                  <option key={c.id} value={c.id} disabled={isFull(c)}>
+                    {c.title} ({c.lectures ?? 0} of {MAX_SETS} lectures{isFull(c) ? ", full" : ""})
+                  </option>
                 ))}
               </select>
             </>
           ) : null}
 
-          <label className="fld" htmlFor="sv-title">Title</label>
-          <input id="sv-title" value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} disabled={busy} placeholder="e.g. Unit 3: citing sources out loud" />
+          <label className="fld" htmlFor="sv-title">Lecture title</label>
+          <input id="sv-title" value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} disabled={busy} placeholder="e.g. Lecture 3: citing sources out loud" />
 
           <label className="fld" htmlFor="sv-note">Note for teachers (optional)</label>
           <textarea id="sv-note" rows={2} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} disabled={busy} placeholder="When to use it, which exercise it goes with…" />
 
-          <div className="fld" style={{ marginTop: 16 }}>Videos under this title <span className="muted" style={{ fontWeight: 400 }}>(up to {MAX_CLIPS})</span></div>
+          <div className="fld" style={{ marginTop: 16 }}>Videos in this lecture <span className="muted" style={{ fontWeight: 400 }}>(up to {MAX_CLIPS})</span></div>
         </>
       )}
 
@@ -302,7 +315,7 @@ export default function StaffVideoUpload({
 
       <div className="row" style={{ marginTop: 14 }}>
         <button type="submit" className="btn gold" disabled={busy}>
-          {busy ? "Saving…" : into ? `Add ${slots.length === 1 ? "the video" : `${slots.length} videos`}` : "Save the title"}
+          {busy ? "Saving…" : into ? `Add ${slots.length === 1 ? "the video" : `${slots.length} videos`}` : "Save the lecture"}
         </button>
         {into && onDone && (
           <button type="button" className="btn ghost" onClick={onDone} disabled={busy}>Cancel</button>
@@ -327,14 +340,29 @@ export default function StaffVideoUpload({
     );
   }
 
+  const chosen = courses.find((c) => c.id === courseId);
+
+  if (!open.length) {
+    return (
+      <div className="card">
+        <h3>Add a recorded lecture</h3>
+        <p className="small muted" style={{ margin: "4px 0 0" }}>
+          Each course can hold up to {MAX_SETS} recorded lectures, and {courses.length > 1 ? "every course" : "this course"} has{" "}
+          {MAX_SETS} already. To add a new lecture, delete one below first (Edit › Delete this lecture).
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="card">
-      <h3>Add a title</h3>
+      <h3>Add a recorded lecture</h3>
       <p className="small muted" style={{ margin: "4px 0 0" }}>
-        Give the title a name and put up to {MAX_CLIPS} videos under it. Upload a file (up to {VIDEO_MAX_MB} MB) or paste a link
-        for a bigger video. Only the teachers of {courses.length > 1 ? "the course you choose" : "this course"} and administrators
-        will see it; students never see teacher videos.
-        {isAdmin ? "" : " You can change or delete the titles you add."}
+        Give the lecture a title and put up to {MAX_CLIPS} videos in it. Upload a file (up to {VIDEO_MAX_MB} MB) or paste a link
+        for a bigger video. Each course can hold up to {MAX_SETS} recorded lectures
+        {chosen && courses.length === 1 ? ` (this course has ${chosen.lectures ?? 0})` : ""}. Only the teachers of{" "}
+        {courses.length > 1 ? "the course you choose" : "this course"} and administrators will see it; students never do.
+        {isAdmin ? "" : " You can change or delete the lectures you add."}
       </p>
       {form}
       <details className="sv-tip">

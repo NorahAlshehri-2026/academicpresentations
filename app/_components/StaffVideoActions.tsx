@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { SOURCE_NAMES, clipName, megabytes, type VideoSetShown } from "@/app/_lib/staff-video-types";
 
 /**
- * The teacher who added a title, or an administrator, renames it, labels and
- * reorders its videos, removes a video, or deletes the whole title.
+ * The teacher who added a recorded lecture, or an administrator, renames it,
+ * labels and reorders its videos, removes a video, or deletes the lecture.
  */
 export default function StaffVideoActions({ courseId, set, onClose }: { courseId: string; set: VideoSetShown; onClose: () => void }) {
   const router = useRouter();
@@ -55,7 +55,7 @@ export default function StaffVideoActions({ courseId, set, onClose }: { courseId
     const last = ids.length === 1;
     const sure = window.confirm(
       last
-        ? `Remove “${name}”? It is the only video under “${set.title}”, so the title is deleted too.`
+        ? `Remove “${name}”? It is the only video in “${set.title}”, so the lecture is deleted too.`
         : `Remove “${name}” from “${set.title}”?${byId.get(id)?.kind === "file" ? " The file is deleted for good." : ""}`
     );
     if (!sure) return;
@@ -76,7 +76,7 @@ export default function StaffVideoActions({ courseId, set, onClose }: { courseId
         if (await send("PATCH", { title, note, labels, order: ids })) onClose();
       }}
     >
-      <label className="fld" htmlFor={`t-${set.id}`}>Title</label>
+      <label className="fld" htmlFor={`t-${set.id}`}>Lecture title</label>
       <input id={`t-${set.id}`} value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} disabled={busy} />
       <label className="fld" htmlFor={`n-${set.id}`}>Note for teachers</label>
       <textarea id={`n-${set.id}`} rows={2} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} disabled={busy} />
@@ -111,7 +111,7 @@ export default function StaffVideoActions({ courseId, set, onClose }: { courseId
         <button type="submit" className="btn sm" disabled={busy || !title.trim()}>{busy ? "Saving…" : "Save changes"}</button>
         <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>Cancel</button>
         <button type="button" className="btn ghost sm sv-danger" onClick={removeSet} disabled={busy} style={{ marginLeft: "auto" }}>
-          Delete this title
+          Delete this lecture
         </button>
       </div>
       {error && <div className="err" style={{ marginTop: 8 }}>{error}</div>}

@@ -5,7 +5,7 @@ import StaffVideoPlayer from "./StaffVideoPlayer";
 import { clipName, type VideoSetShown } from "@/app/_lib/staff-video-types";
 
 /**
- * "Show to class": a teacher plays a title's videos on the classroom screen.
+ * "Show to class": a teacher plays a recorded lecture's videos on the classroom screen.
  * The video fills the screen on a dark background with the title above it and
  * a button for each video below, and nothing else of the academy shows, so
  * students see the video only. Students themselves can never open teacher
@@ -99,7 +99,7 @@ export default function ShowToClass({ set, courseTitle }: { set: VideoSetShown; 
           </div>
 
           {clips.length > 1 && (
-            <div className="stc-parts" role="group" aria-label="Videos under this title">
+            <div className="stc-parts" role="group" aria-label="Videos in this lecture">
               <button type="button" className="stc-step" onClick={() => setAt((n) => Math.max(0, n - 1))} disabled={at === 0} aria-label="Previous video">
                 ‹
               </button>
