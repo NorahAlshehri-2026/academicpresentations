@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { browserClient } from "@/app/_lib/supabase-browser";
+import { REFS_HINT } from "./LectureRefs";
 import {
   MAX_CLIPS,
   MAX_SETS,
@@ -79,6 +80,7 @@ export default function StaffVideoUpload({
   const [courseId, setCourseId] = useState(into?.courseId ?? open[0]?.id ?? courses[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
+  const [refs, setRefs] = useState("");
   const [slots, setSlots] = useState<Slot[]>([blank(0)]);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
@@ -180,7 +182,7 @@ export default function StaffVideoUpload({
       }
 
       setStage("Saving…");
-      const finish = await post({ step: "save", courseId, setId: into?.setId, title, note, clips });
+      const finish = await post({ step: "save", courseId, setId: into?.setId, title, note, refs, clips });
       if (!finish.ok) throw new Error(finish.out.error ?? "The videos could not be added to the list.");
 
       const n = clips.length;
@@ -192,6 +194,7 @@ export default function StaffVideoUpload({
       });
       setTitle("");
       setNote("");
+      setRefs("");
       setSlots([blank(next.current++)]);
       router.refresh();
       onDone?.();
@@ -228,6 +231,16 @@ export default function StaffVideoUpload({
 
           <label className="fld" htmlFor="sv-note">Note for teachers (optional)</label>
           <textarea id="sv-note" rows={2} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} disabled={busy} placeholder="When to use it, which exercise it goes with…" />
+          <label className="fld" htmlFor="sv-refs">References (optional)</label>
+          <textarea
+            id="sv-refs"
+            rows={3}
+            value={refs}
+            onChange={(e) => setRefs(e.target.value)}
+            disabled={busy}
+            placeholder={"Author, A. A., & Author, B. B. (2025). Title of the article. *Journal Name*, *12*(3), 45–67. https://doi.org/…"}
+          />
+          <p className="tiny muted" style={{ margin: "4px 0 0" }}>{REFS_HINT}</p>
 
           <div className="fld" style={{ marginTop: 16 }}>Videos in this lecture <span className="muted" style={{ fontWeight: 400 }}>(up to {MAX_CLIPS})</span></div>
         </>

@@ -5,6 +5,7 @@ import StaffVideoPlayer from "./StaffVideoPlayer";
 import StaffVideoActions from "./StaffVideoActions";
 import StaffVideoUpload from "./StaffVideoUpload";
 import ShowToClass from "./ShowToClass";
+import LectureRefs from "./LectureRefs";
 import { MAX_CLIPS, SOURCE_NAMES, clipName, megabytes, type VideoSetShown } from "@/app/_lib/staff-video-types";
 
 /**
@@ -81,6 +82,8 @@ export default function StaffVideoSet({
       {mode === "add" && (
         <StaffVideoUpload courses={[]} into={{ courseId, setId: set.id, title: set.title, room }} onDone={() => setMode("view")} />
       )}
+
+      {mode !== "edit" && <LectureRefs refs={set.refs} id={set.id} />}
     </section>
   );
 }
