@@ -5,6 +5,7 @@ import { loadCourse } from "@/app/_lib/course";
 import { signedCoursebook } from "@/app/_lib/coursebook";
 import { loadAnswerKey } from "@/app/_lib/answer-key";
 import CoursebookViewer from "@/app/_components/CoursebookViewer";
+import { seesAsStudent } from "@/app/_lib/preview";
 
 /**
  * The workbook as online pages. ?page=7 opens at a page, ?track=16 at the page
@@ -40,8 +41,10 @@ export default async function CoursebookPage({ searchParams }: { searchParams?: 
   }
 
   const { book } = found;
-  // teachers and administrators only: the answer key never reaches a student's browser
-  const answers = profile.role === "student" ? [] : (await loadAnswerKey(course.id))?.items ?? [];
+  // teachers and administrators only: the answer key never reaches a student's browser,
+  // and it is hidden in the student preview too
+  const asStudent = seesAsStudent(profile);
+  const answers = asStudent ? [] : (await loadAnswerKey(course.id))?.items ?? [];
   const total = book.pages.length;
   const num = (v?: string) => {
     const n = parseInt(v ?? "", 10);
@@ -58,7 +61,7 @@ export default async function CoursebookPage({ searchParams }: { searchParams?: 
         <h1>Coursebook</h1>
         <p className="lead">
           {total} pages · {Object.keys(book.tracks).length} listening tracks
-          {profile.role === "admin" && (
+          {profile.role === "admin" && !asStudent && (
             <>
               {" · "}
               <Link href="/admin/coursebook" className="small">Update the files</Link>
