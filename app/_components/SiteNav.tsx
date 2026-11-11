@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Role } from "@/app/_lib/types";
+import { startPreviewHref, stopPreviewHref } from "@/app/_lib/preview-cookie";
 
 /**
  * Each tab carries its own colour by what it is for (see .sitenav [data-tone]
@@ -28,14 +29,26 @@ type Item = [href: string, label: string, tone: Tone, cta?: boolean];
  * Staff get the same course pages (as a student preview) plus their own:
  * My classes and Recorded lectures. Recorded lectures is never in the student list,
  * and no student page links to it.
+ *
+ * Staff also get "Student preview", which switches the whole site to the
+ * student tabs and pages until they press "Exit preview" (previewing = true).
  */
-export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?: boolean }) {
+export default function SiteNav({
+  role,
+  isOwner,
+  previewing,
+}: {
+  role: Role | null;
+  isOwner?: boolean;
+  previewing?: boolean;
+}) {
   const path = usePathname() ?? "/";
+  const staff = !!role && role !== "student";
 
   let items: Item[];
   if (!role) {
     items = [["/", "Home", "home"], ["/guide", "Guide", "guide"], ["/courses", "Courses", "learn"], ["/rubric", "Rubric", "assess"]];
-  } else if (role === "student") {
+  } else if (role === "student" || (staff && previewing)) {
     items = [
       ["/", "Home", "home"],
       ["/guide", "Guide", "guide"],
@@ -69,8 +82,8 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
       : path === href ||
         path.startsWith(href + "/") ||
         (href === "/activities" && path.startsWith("/learn/")) ||
-        (href === "/shared" && path.startsWith("/review/") && role === "student") ||
-        (href === "/teach" && path.startsWith("/review/") && role !== "student");
+        (href === "/shared" && path.startsWith("/review/") && (role === "student" || previewing)) ||
+        (href === "/teach" && path.startsWith("/review/") && role !== "student" && !previewing);
 
   return (
     <nav className="sitenav">
@@ -85,6 +98,16 @@ export default function SiteNav({ role, isOwner }: { role: Role | null; isOwner?
           {label}
         </Link>
       ))}
+      {staff && previewing && (
+        <a href={stopPreviewHref(path)} className="pv-exit" title="Back to the teacher view of the site">
+          Exit preview
+        </a>
+      )}
+      {staff && !previewing && (
+        <a href={startPreviewHref(path)} className="pv-start" title="See the whole site as your students see it">
+          Student preview
+        </a>
+      )}
       {role ? (
         <form action="/auth/signout" method="post">
           <button type="submit" className="cta-out">Sign out</button>

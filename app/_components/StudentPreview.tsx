@@ -2,16 +2,35 @@ import Link from "next/link";
 import { mmss, metricsOf, paceLabel } from "@/app/_lib/format";
 import FeedbackList, { type FeedbackRow } from "./FeedbackList";
 import { objectivesFor, encodeObjectives, type Rating } from "@/app/_lib/objectives";
+import { cookieSaysPreview } from "@/app/_lib/preview";
+import { PreviewLink } from "./PreviewBar";
 
-/** The strip at the top of a page that a teacher or administrator is seeing as a student would. */
+/**
+ * The strip at the top of a page that a teacher or administrator is seeing as a student would.
+ * In the full student preview the gold bar under the header already says so, and only the
+ * note about saving (on a speaking task) is kept.
+ */
 export function PreviewBanner({ saving }: { saving?: boolean }) {
+  const full = cookieSaysPreview();
+  const savingNote =
+    saving
+      ? "You are enrolled in a class of this course, so recordings you save here are saved like a student's."
+      : "The recorder, timer and playback all work, but nothing you record here is saved.";
+  if (full) {
+    if (saving === undefined) return null;
+    return (
+      <div className="note" style={{ marginBottom: 12, borderLeft: "4px solid var(--pv, #e0a526)" }}>
+        {savingNote}
+      </div>
+    );
+  }
   return (
     <div className="note" style={{ marginBottom: 12, borderLeft: "4px solid var(--gold)" }}>
       <b>Student preview.</b>{" "}
-      {saving
-        ? "You are enrolled in a class of this course, so recordings you save here are saved like a student's."
-        : "This is what your students see. The recorder, timer and playback all work, but nothing you record here is saved."}{" "}
+      {saving ? savingNote : `This is what your students see. ${savingNote}`}{" "}
       <Link href="/teach">Back to my classes</Link>
+      {" · "}
+      <PreviewLink>See the whole site as a student</PreviewLink>
     </div>
   );
 }
