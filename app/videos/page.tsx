@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentProfile, homeFor } from "@/app/_lib/supabase";
-import { canManage, loadVideos, videoCourses, withLinks } from "@/app/_lib/staff-videos";
-import { megabytes } from "@/app/_lib/staff-video-types";
+import { canManage, loadSets, videoCourses, withLinks } from "@/app/_lib/staff-videos";
+import { MAX_CLIPS, megabytes } from "@/app/_lib/staff-video-types";
 import StaffVideoUpload from "@/app/_components/StaffVideoUpload";
-import StaffVideoActions from "@/app/_components/StaffVideoActions";
+import StaffVideoSet from "@/app/_components/StaffVideoSet";
 
 export const metadata: Metadata = { title: "Teacher videos · Foundations of Academic Presentations" };
 
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { timeZone: "Asia/Riyadh", day: "numeric", month: "short", year: "numeric" });
 
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
 /**
- * Teacher videos: for teachers and administrators only. A teacher sees and
- * adds videos for the courses they teach, and renames or deletes the ones they
- * added; an administrator does this for every course and every video.
- * Students never get the tab, are sent home from this page, and cannot open
- * the files.
+ * Teacher videos: for teachers and administrators only. Videos are grouped
+ * under titles, up to three a title. A teacher sees and adds titles for the
+ * courses they teach, and changes or deletes the ones they added; an
+ * administrator does this for every course and every title. "Show to class"
+ * plays a title's videos full screen for the classroom.
+ * Students never get the tab, are sent home from this page, cannot open the
+ * files, and the student preview pages never show these videos.
  */
 export default async function TeacherVideos() {
   const profile = await currentProfile();
@@ -26,18 +30,25 @@ export default async function TeacherVideos() {
   const isAdmin = profile.role === "admin";
   const courses = await videoCourses(profile);
   const lists = await Promise.all(
-    courses.map(async (c) => ({ course: c, videos: await withLinks(c.id, await loadVideos(c.id)) }))
+    courses.map(async (c) => ({ course: c, sets: await withLinks(c.id, await loadSets(c.id)) }))
   );
-  const count = lists.reduce((n, l) => n + l.videos.length, 0);
-  const bytes = lists.reduce((n, l) => n + l.videos.reduce((m, v) => m + (v.size || 0), 0), 0);
+  const titles = lists.reduce((n, l) => n + l.sets.length, 0);
+  const videos = lists.reduce((n, l) => n + l.sets.reduce((m, s) => m + s.clips.length, 0), 0);
+  const bytes = lists.reduce(
+    (n, l) => n + l.sets.reduce((m, s) => m + s.clips.reduce((k, c) => k + (c.kind === "file" ? c.size || 0 : 0), 0), 0),
+    0
+  );
 
   return (
     <>
       <div className="pagehead">
         <h1>Teacher videos</h1>
         <p className="lead">
-          For teachers and administrators only. Students cannot see this page or open these videos.
-          {isAdmin && count > 0 ? ` ${count} video${count === 1 ? "" : "s"}, ${megabytes(bytes)} in all.` : ""}
+          For teachers and administrators only: students cannot see this page or open these videos, and they are not part of
+          the student preview. To play one for your students, press <b>Show to class</b>.
+          {isAdmin && titles > 0
+            ? ` ${plural(titles, "title")}, ${plural(videos, "video")}${bytes ? ` (${megabytes(bytes)} of uploaded files)` : ""}.`
+            : ""}
         </p>
       </div>
 
@@ -52,44 +63,36 @@ export default async function TeacherVideos() {
           </p>
         </div>
       ) : (
-        lists.map(({ course, videos }) => (
+        lists.map(({ course, sets }) => (
           <div className="card" key={course.id}>
             <div className="spread">
               <h3>{course.title}</h3>
               <span className="tiny muted" style={{ whiteSpace: "nowrap" }}>
-                {videos.length} video{videos.length === 1 ? "" : "s"}
+                {plural(sets.length, "title")} · {plural(sets.reduce((m, s) => m + s.clips.length, 0), "video")}
               </span>
             </div>
-            {videos.length ? (
-              <div className="sv-grid">
-                {videos.map((v) => (
-                  <div className="sv-item" key={v.id}>
-                    {v.src ? (
-                      <video className="play" controls playsInline preload="metadata" controlsList="nodownload" src={v.src} />
-                    ) : (
-                      <p className="small muted">This video could not be loaded. Reload the page to try again.</p>
-                    )}
-                    <h4>{v.title}</h4>
-                    {v.note && <p className="small" style={{ margin: "0 0 4px" }}>{v.note}</p>}
-                    <p className="tiny muted" style={{ margin: 0 }}>
-                      {megabytes(v.size)} · added {day(v.added)}
-                      {v.by ? ` by ${v.by}` : ""}
-                    </p>
-                    {canManage(profile, v) && <StaffVideoActions courseId={course.id} id={v.id} title={v.title} note={v.note} />}
-                  </div>
-                ))}
-              </div>
+            {sets.length ? (
+              sets.map((s) => (
+                <StaffVideoSet
+                  key={s.id}
+                  set={s}
+                  courseId={course.id}
+                  courseTitle={course.title}
+                  addedOn={day(s.added)}
+                  manage={canManage(profile, s)}
+                />
+              ))
             ) : (
               <p className="small muted" style={{ marginTop: 6 }}>
-                No videos for this course yet. Add one above.
+                No videos for this course yet. Add a title above, with up to {MAX_CLIPS} videos under it.
               </p>
             )}
           </div>
         ))
       )}
 
-      {count > 0 && (
-        <p className="tiny muted">If a video stops loading after a few hours, reload the page.</p>
+      {videos > 0 && (
+        <p className="tiny muted">If an uploaded video stops loading after a few hours, reload the page.</p>
       )}
     </>
   );
