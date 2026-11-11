@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { currentProfile, serverClient } from "@/app/_lib/supabase";
 import SiteNav from "@/app/_components/SiteNav";
+import PreviewBar from "@/app/_components/PreviewBar";
+import { isPreviewing } from "@/app/_lib/preview";
 
 /**
  * Every page reads the database, and what it reads changes as you teach:
@@ -23,12 +25,14 @@ const ROLE_LABEL = { student: "Student", teacher: "Teacher", admin: "Administrat
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let profile = null;
   let isOwner = false;
+  let previewing = false;
   try {
     profile = await currentProfile();
     if (profile?.role === "admin") {
       const { data } = await serverClient().rpc("is_owner");
       isOwner = data === true;
     }
+    previewing = isPreviewing(profile);
   } catch {
     // Supabase not configured yet — the public pages still render
   }
@@ -44,13 +48,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <b>Academic Presentations</b>
                 <i>
                   {profile
-                    ? `${profile.full_name} · ${isOwner ? "Academy owner" : ROLE_LABEL[profile.role]}`
+                    ? previewing
+                      ? `${profile.full_name} · Student preview`
+                      : `${profile.full_name} · ${isOwner ? "Academy owner" : ROLE_LABEL[profile.role]}`
                     : "Online academy"}
                 </i>
               </span>
             </Link>
-            <SiteNav role={profile?.role ?? null} isOwner={isOwner} />
+            <SiteNav role={profile?.role ?? null} isOwner={isOwner} previewing={previewing} />
           </div>
+          {previewing && <PreviewBar />}
         </header>
         <main>
           <div className="wrap">{children}</div>

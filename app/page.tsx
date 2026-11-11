@@ -6,6 +6,18 @@ import Icon from "@/app/_components/Icon";
 import { PreviewBanner } from "@/app/_components/StudentPreview";
 import DueNotice, { type DueItem } from "@/app/_components/DueNotice";
 import { studentDue, riyadhParts, fromRiyadh } from "@/app/_lib/due";
+import { isPreviewing } from "@/app/_lib/preview";
+import HomeCalendar, { type CalItem } from "@/app/_components/HomeCalendar";
+import { previewCalendar, staffCalendar, studentCalendar } from "@/app/_lib/home-calendar";
+import AnnouncementList from "@/app/_components/AnnouncementList";
+import AnnouncementsPanel from "@/app/_components/AnnouncementsPanel";
+import {
+  announcementsForPreview,
+  announcementsForStaff,
+  announcementsForStudent,
+  postableSections,
+  sampleAnnouncement,
+} from "@/app/_lib/announcements";
 
 type Tile = { href: string; icon: string; colour: string; title: string; text: string };
 
@@ -79,9 +91,14 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
   }
 
   // ---------------------------------------------------------------- staff
-  if (profile.role !== "student" && searchParams?.preview === "student") {
+  if (profile.role !== "student" && (isPreviewing(profile) || searchParams?.preview === "student")) {
     // the student Home, with sample details, for teachers and administrators
-    const { course, lessons } = await loadCourse();
+    const supabase = serverClient();
+    const [{ course, lessons }, posts, realDue] = await Promise.all([
+      loadCourse(),
+      announcementsForPreview(profile).catch(() => []),
+      previewCalendar(supabase, profile).catch(() => [] as CalItem[]),
+    ]);
     const first = lessons.find((l) => l.kind === "practice") ?? null;
     // a sample deadline three days from now, 11:59 pm Riyadh time
     const t = riyadhParts(new Date());
@@ -98,6 +115,11 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
             },
           ]
         : [];
+    // the calendar: the real deadlines of the viewer's own classes, or a sample
+    const calItems: CalItem[] =
+      realDue.length || !course || !first
+        ? realDue
+        : [{ key: "sample", title: first.title, dueAt: sampleDue[0].dueAt, href: sampleDue[0].href, unit: first.unit }];
     return (
       <>
         <PreviewBanner />
@@ -105,6 +127,10 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
           <h1>Welcome back, Sara</h1>
           <p className="lead">Section 101 · Semester 1, 2026-27 <span className="tiny">(sample details)</span></p>
         </div>
+        <AnnouncementList
+          items={posts.length ? posts : [sampleAnnouncement(profile.full_name)]}
+          sample={!posts.length}
+        />
         <DueNotice upcoming={sampleDue} overdue={[]} sample />
         <Tiles items={STUDENT_TILES} />
         {course && first ? (
@@ -121,11 +147,23 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
         ) : (
           <NextStep text="Record your academic presentation and submit it for feedback." href="/activities" label="Upload Presentation" icon="mic" />
         )}
+        <HomeCalendar
+          items={calItems}
+          icsHref={null}
+          sample={!realDue.length && calItems.length > 0}
+          emptyText="No deadlines yet. When your teacher sets one, it appears on this calendar."
+        />
       </>
     );
   }
 
   if (profile.role !== "student") {
+    const supabase = serverClient();
+    const sections = await postableSections(profile).catch(() => []);
+    const [posts, calItems] = await Promise.all([
+      announcementsForStaff(profile, sections).catch(() => []),
+      staffCalendar(supabase, profile).catch(() => [] as CalItem[]),
+    ]);
     return (
       <>
         <div className="pagehead">
@@ -149,15 +187,26 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
           icon="arrow"
         />
         <p className="small center" style={{ marginTop: 14 }}>
-          <Link href="/?preview=student">See the student Home page (student preview)</Link>
+          <a href="/preview?to=on&next=%2F">See the site as a student (student preview)</a>
         </p>
+        <HomeCalendar
+          items={calItems}
+          icsHref="/calendar?scope=teaching"
+          staff
+          emptyText={
+            profile.role === "admin"
+              ? "No class has a deadline yet. Teachers set them in each class, under Deadlines."
+              : "No deadlines yet. Open a class in My classes and set them under Deadlines."
+          }
+        />
+        <AnnouncementsPanel items={posts} sections={sections} isAdmin={profile.role === "admin"} />
       </>
     );
   }
 
   // ---------------------------------------------------------------- students
   const supabase = serverClient();
-  const [{ data: subs }, { data: shared }, { data: enrol }, { course, lessons }, deadlines] = await Promise.all([
+  const [{ data: subs }, { data: shared }, { data: enrol }, { course, lessons }, deadlines, posts] = await Promise.all([
     supabase.from("submissions").select("lesson_id").eq("student_id", profile.id),
     supabase
       .from("submission_shares")
@@ -172,9 +221,11 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
       .maybeSingle(),
     loadCourse(),
     studentDue(supabase, profile.id),
+    announcementsForStudent(profile).catch(() => []),
   ]);
 
   const attempted = new Set(((subs ?? []) as any[]).map((s) => s.lesson_id));
+  const calItems = await studentCalendar(supabase, profile, attempted).catch(() => [] as CalItem[]);
   const practice = lessons.filter((l) => l.kind === "practice");
   const next = practice.find((l) => !attempted.has(l.id)) ?? null;
   const waiting = ((shared ?? []) as any[]).filter(
@@ -209,6 +260,8 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
         </p>
       </div>
 
+      <AnnouncementList items={posts} />
+
       <DueNotice upcoming={upcoming} overdue={overdue} />
 
       <Tiles items={STUDENT_TILES} />
@@ -241,6 +294,12 @@ export default async function Home({ searchParams }: { searchParams?: { preview?
           icon="chart"
         />
       )}
+
+      <HomeCalendar
+        items={calItems}
+        icsHref="/calendar"
+        emptyText="No deadlines yet. When your teacher sets one, it appears on this calendar."
+      />
     </>
   );
 }
