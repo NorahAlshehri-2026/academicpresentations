@@ -87,7 +87,8 @@ export default function GuidePage() {
             <b>Recorded lectures</b> keeps up to {MAX_SETS} recorded lectures for each course you teach, each with up to three
             videos. Upload a file of up to {VIDEO_MAX_MB} MB, or paste a YouTube (Unlisted), Google Drive, Vimeo or OneDrive link
             for a longer video. Students never see this tab; press <b>Show to class</b> to play a lecture full screen on the
-            classroom screen.
+            classroom screen. Add a lecture&rsquo;s sources in its <b>References</b> box (one per line, APA style); they are
+            listed in alphabetical order at the bottom of the lecture.
           </li>
           <li>Teacher and administrator accounts are created only from a one-time link sent by the academy owner.</li>
         </ul>
