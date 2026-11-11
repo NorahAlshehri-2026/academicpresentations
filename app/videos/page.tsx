@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentProfile, homeFor } from "@/app/_lib/supabase";
 import { canManage, loadSets, videoCourses, withLinks } from "@/app/_lib/staff-videos";
-import { MAX_CLIPS, megabytes } from "@/app/_lib/staff-video-types";
+import { MAX_CLIPS, MAX_SETS, megabytes } from "@/app/_lib/staff-video-types";
 import StaffVideoUpload from "@/app/_components/StaffVideoUpload";
 import StaffVideoSet from "@/app/_components/StaffVideoSet";
 
-export const metadata: Metadata = { title: "Teacher videos · Foundations of Academic Presentations" };
+export const metadata: Metadata = { title: "Recorded lectures · Foundations of Academic Presentations" };
 
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { timeZone: "Asia/Riyadh", day: "numeric", month: "short", year: "numeric" });
@@ -14,11 +14,12 @@ const day = (iso: string) =>
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
 /**
- * Teacher videos: for teachers and administrators only. Videos are grouped
- * under titles, up to three a title. A teacher sees and adds titles for the
- * courses they teach, and changes or deletes the ones they added; an
- * administrator does this for every course and every title. "Show to class"
- * plays a title's videos full screen for the classroom.
+ * Recorded lectures (the /videos page): for teachers and administrators only.
+ * A course holds up to six recorded lectures, each with up to three videos.
+ * A teacher sees and adds lectures for the courses they teach, and changes or
+ * deletes the ones they added; an administrator does this for every course and
+ * every lecture. "Show to class" plays a lecture's videos full screen for the
+ * classroom.
  * Students never get the tab, are sent home from this page, cannot open the
  * files, and the student preview pages never show these videos.
  */
@@ -42,24 +43,27 @@ export default async function TeacherVideos() {
   return (
     <>
       <div className="pagehead">
-        <h1>Teacher videos</h1>
+        <h1>Recorded lectures</h1>
         <p className="lead">
-          For teachers and administrators only: students cannot see this page or open these videos, and they are not part of
-          the student preview. To play one for your students, press <b>Show to class</b>.
+          Up to {MAX_SETS} recorded lectures a course, each with up to {MAX_CLIPS} videos. For teachers and administrators only:
+          students cannot see this page or open these videos, and they are not part of the student preview. To play a lecture
+          for your students, press <b>Show to class</b>.
           {isAdmin && titles > 0
-            ? ` ${plural(titles, "title")}, ${plural(videos, "video")}${bytes ? ` (${megabytes(bytes)} of uploaded files)` : ""}.`
+            ? ` ${plural(titles, "lecture")}, ${plural(videos, "video")}${bytes ? ` (${megabytes(bytes)} of uploaded files)` : ""}.`
             : ""}
         </p>
       </div>
 
-      {courses.length > 0 && <StaffVideoUpload courses={courses} isAdmin={isAdmin} />}
+      {courses.length > 0 && (
+        <StaffVideoUpload courses={lists.map((l) => ({ ...l.course, lectures: l.sets.length }))} isAdmin={isAdmin} />
+      )}
 
       {!courses.length ? (
         <div className="card">
           <p className="small muted" style={{ margin: 0 }}>
             {isAdmin
-              ? "There is no course yet. Videos are added to a course."
-              : "You can add and watch videos here for the courses you teach. Open a class under My classes first."}
+              ? "There is no course yet. Recorded lectures are added to a course."
+              : "You can add and watch recorded lectures here for the courses you teach. Open a class under My classes first."}
           </p>
         </div>
       ) : (
@@ -68,7 +72,7 @@ export default async function TeacherVideos() {
             <div className="spread">
               <h3>{course.title}</h3>
               <span className="tiny muted" style={{ whiteSpace: "nowrap" }}>
-                {plural(sets.length, "title")} · {plural(sets.reduce((m, s) => m + s.clips.length, 0), "video")}
+                {sets.length} of {MAX_SETS} lectures · {plural(sets.reduce((m, s) => m + s.clips.length, 0), "video")}
               </span>
             </div>
             {sets.length ? (
@@ -84,7 +88,7 @@ export default async function TeacherVideos() {
               ))
             ) : (
               <p className="small muted" style={{ marginTop: 6 }}>
-                No videos for this course yet. Add a title above, with up to {MAX_CLIPS} videos under it.
+                No recorded lectures for this course yet. Add one above, with up to {MAX_CLIPS} videos.
               </p>
             )}
           </div>

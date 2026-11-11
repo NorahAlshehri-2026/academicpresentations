@@ -12,6 +12,7 @@ import {
 } from "@/app/_lib/staff-videos";
 import {
   MAX_CLIPS,
+  MAX_SETS,
   VIDEO_MAX_MB,
   VIDEO_TYPES,
   isVideoId,
@@ -23,8 +24,8 @@ import {
 } from "@/app/_lib/staff-video-types";
 
 /**
- * Teacher videos, for teachers and administrators only (students are refused).
- * Videos are grouped under titles, up to three videos a title.
+ * Recorded lectures, for teachers and administrators only (students are refused).
+ * A course holds up to six lectures, each a title with up to three videos.
  *   POST { step: "start", courseId, setId?, name, size }   → a link to upload one file to
  *   POST { step: "save", courseId, setId?, title?, note?, clips }
  *        → a new title with its videos, or more videos for an existing title.
@@ -40,7 +41,7 @@ import {
 async function staff(body: any) {
   const profile = await currentProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "teacher")) {
-    return { error: NextResponse.json({ error: "Only teachers and administrators can add or change teacher videos." }, { status: 403 }) };
+    return { error: NextResponse.json({ error: "Only teachers and administrators can add or change recorded lectures." }, { status: 403 }) };
   }
   const courseId = typeof body?.courseId === "string" ? body.courseId : "";
   const allowed = courseId ? (await videoCourses(profile)).some((c) => c.id === courseId) : false;
@@ -57,8 +58,10 @@ async function staff(body: any) {
 
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
-const NOT_YOURS = "Only the teacher who added this title, or an administrator, can change it.";
-const FULL = `A title can hold up to ${MAX_CLIPS} videos.`;
+const NOT_YOURS = "Only the teacher who added this lecture, or an administrator, can change it.";
+const FULL = `A lecture can hold up to ${MAX_CLIPS} videos.`;
+const COURSE_FULL = `This course already has ${MAX_SETS} recorded lectures, the most it can hold. Delete one to add another.`;
+const GONE = "That lecture is no longer there. Reload the page.";
 const UNREADABLE = "The video list could not be read just now. Please try again.";
 
 /** "<uuid>.mp4" → true */
@@ -81,13 +84,16 @@ export async function POST(request: Request) {
   const { profile, courseId } = found;
 
   if (body?.step === "start") {
+    // check there is room before anything is uploaded
+    const sets = await load(courseId);
+    if (!sets) return fail(UNREADABLE, 500);
     if (body?.setId) {
-      const sets = await load(courseId);
-      if (!sets) return fail(UNREADABLE, 500);
       const set = sets.find((s) => s.id === body.setId);
-      if (!set) return fail("That title is no longer there. Reload the page.", 404);
+      if (!set) return fail(GONE, 404);
       if (!canManage(profile, set)) return fail(NOT_YOURS, 403);
       if (set.clips.length >= MAX_CLIPS) return fail(FULL, 409);
+    } else if (sets.length >= MAX_SETS) {
+      return fail(COURSE_FULL, 409);
     }
     const ext = videoExt(String(body?.name ?? ""));
     if (!VIDEO_TYPES[ext]) return fail("Choose an MP4, WebM or MOV video file.");
@@ -118,12 +124,14 @@ export async function POST(request: Request) {
     let set: VideoSet | undefined;
     if (body?.setId) {
       set = sets.find((s) => s.id === body.setId);
-      if (!set) return fail("That title is no longer there. Reload the page.", 404);
+      if (!set) return fail(GONE, 404);
       if (!canManage(profile, set)) return fail(NOT_YOURS, 403);
       if (set.clips.length + input.length > MAX_CLIPS) {
         const room = MAX_CLIPS - set.clips.length;
-        return fail(room > 0 ? `This title has room for ${room} more video${room === 1 ? "" : "s"}.` : FULL, 409);
+        return fail(room > 0 ? `This lecture has room for ${room} more video${room === 1 ? "" : "s"}.` : FULL, 409);
       }
+    } else if (sets.length >= MAX_SETS) {
+      return fail(COURSE_FULL, 409);
     }
 
     const now = new Date().toISOString();
@@ -154,7 +162,7 @@ export async function POST(request: Request) {
       set.clips.push(...clips);
     } else {
       title = clean(body?.title, 120);
-      if (!title) return fail("Give the title a name.");
+      if (!title) return fail("Give the lecture a title.");
       sets.push({
         id: crypto.randomUUID(),
         title,
@@ -193,11 +201,11 @@ export async function PATCH(request: Request) {
   const sets = await load(found.courseId);
   if (!sets) return fail(UNREADABLE, 500);
   const set = sets.find((s) => s.id === body?.setId);
-  if (!set) return fail("That title is no longer there.", 404);
+  if (!set) return fail(GONE, 404);
   if (!canManage(found.profile, set)) return fail(NOT_YOURS, 403);
 
   const title = clean(body?.title, 120);
-  if (!title) return fail("Give the title a name.");
+  if (!title) return fail("Give the lecture a title.");
   set.title = title;
   set.note = clean(body?.note, 500);
 
@@ -232,7 +240,7 @@ export async function DELETE(request: Request) {
     gone = set.clips.filter((c) => c.id === body.clipId);
     if (!gone.length) return NextResponse.json({ ok: true });
     set.clips = set.clips.filter((c) => c.id !== body.clipId);
-    // a title with no videos left goes too
+    // a lecture with no videos left goes too
     next = set.clips.length ? sets : sets.filter((s) => s.id !== set.id);
   } else {
     gone = set.clips;

@@ -1,9 +1,10 @@
 /**
- * Teacher videos: videos that only teachers and administrators can add and
+ * Recorded lectures: videos that only teachers and administrators can add and
  * watch. Students never see them; a teacher shows one to a class from the
- * Teacher videos page with "Show to class".
+ * Recorded lectures page with "Show to class".
  *
- * Videos are grouped under a title, up to three videos a title. Each video is
+ * A course holds up to six recorded lectures, and each lecture up to three
+ * videos (a lecture is a "set" in the code). Each video is
  * either a file uploaded to the academy's storage (up to the storage limit:
  * 50 MB a file on Supabase's free plan) or a link to a video kept elsewhere
  * (YouTube, Google Drive, Vimeo, OneDrive/SharePoint or a direct MP4 link),
@@ -12,8 +13,11 @@
  * Shared by the server and the browser, so nothing here is secret.
  */
 
-/** The most videos one title can hold. */
+/** The most videos one recorded lecture can hold. */
 export const MAX_CLIPS = 3;
+
+/** The most recorded lectures one course can hold. */
+export const MAX_SETS = 6;
 
 export type LinkSource = "youtube" | "drive" | "vimeo" | "microsoft" | "direct";
 
@@ -47,7 +51,7 @@ export type LinkClip = {
 
 export type Clip = FileClip | LinkClip;
 
-/** One title and its videos (one to three). */
+/** One recorded lecture: its title and its videos (one to three). */
 export type VideoSet = {
   id: string;
   title: string;
