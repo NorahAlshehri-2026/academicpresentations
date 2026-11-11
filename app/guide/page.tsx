@@ -18,6 +18,10 @@ export default function GuidePage() {
             Next time, just sign in. If you are given a second class link, open it while signed in and you are
             added to that class too.
           </li>
+          <li>
+            Your <b>Home</b> page shows your teacher&rsquo;s <b>announcements</b> at the top and a <b>calendar</b> of your
+            deadlines at the bottom. Tap a day to see what is due; <b>Add all to my calendar</b> puts them in your phone&rsquo;s calendar.
+          </li>
         </ol>
       </div>
 
@@ -58,8 +62,22 @@ export default function GuidePage() {
         <h3>For teachers</h3>
         <ul className="small" style={{ paddingLeft: 18, margin: "8px 0 0" }}>
           <li style={{ marginBottom: 6 }}>
-            <b>Units</b> and <b>Activities</b> show you exactly what students see (a student preview: you can try the recorder, nothing is saved). Open <b>My classes</b>, open a class, and post its link in your announcement or WhatsApp group. Close
+            <b>Student preview</b> in the header shows you the whole site as a student sees it: the student tabs, the
+            student Home page with sample details, and none of the teacher-only parts. You can try the recorder; nothing is
+            saved unless you are enrolled in a class yourself. Press <b>Exit preview</b> (or open My classes) to go back.
+          </li>
+          <li style={{ marginBottom: 6 }}>
+            Open <b>My classes</b>, open a class, and post its link in your announcement or WhatsApp group. Close
             the link once everyone has joined, or make a new one to retire the old.
+          </li>
+          <li style={{ marginBottom: 6 }}>
+            <b>Announcements</b> are on your Home page: press <b>New announcement</b>, write a title and message, tick the
+            classes it is for and choose how long it shows. Students see it at the top of their Home page. Administrators can
+            also post to everyone in the academy. Whoever posted it, and any administrator, can edit or remove it.
+          </li>
+          <li style={{ marginBottom: 6 }}>
+            The <b>calendar</b> on your Home page shows the deadlines of your classes (administrators: every class). Tap a day
+            to see what is due and open the class. Deadlines are set in each class, under Deadlines.
           </li>
           <li style={{ marginBottom: 6 }}>
             <b>Open gradebook</b> shows who has joined, their attempts, and their marks. Open any attempt to listen,
